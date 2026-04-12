@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주식 투자 AI 브리핑 - 2026-04-11</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a14; color:#e0e0e0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.7; padding:20px; max-width:900px; margin:0 auto; }
+
+.header { text-align:center; padding:30px 0 20px; border-bottom:1px solid #2a2a3e; margin-bottom:30px; }
+.header h1 { font-size:1.8rem; color:#ffffff; margin-bottom:6px; }
+.header .subtitle { color:#6c5ce7; font-size:0.95rem; margin-bottom:4px; }
+.header .date { color:#888; font-size:0.85rem; }
+
+.section { margin-bottom:35px; }
+.section-title { font-size:1.3rem; color:#ffffff; margin-bottom:15px; padding-left:12px; border-left:3px solid #6c5ce7; }
+
+.market-summary { background:#141420; border-radius:12px; padding:22px; }
+.summary-block { margin-bottom:18px; }
+.summary-block:last-child { margin-bottom:0; }
+.summary-subtitle { color:#6c5ce7; font-size:1.05rem; margin-bottom:6px; }
+.summary-text { color:#ccc; font-size:0.95rem; line-height:1.9; }
+
+.sector-badge { display:inline-block; background:#6c5ce7; color:#fff; padding:5px 14px; border-radius:20px; margin:4px; font-size:0.9rem; }
+
+.stock-card { background:#141420; border-radius:12px; padding:22px; margin-bottom:20px; border:1px solid #2a2a3e; transition:border-color 0.2s; }
+.stock-card:hover { border-color:#6c5ce7; }
+.hidden-card { border-color:#f39c12; }
+.hidden-card:hover { border-color:#e67e22; }
+
+.stock-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.stock-rank { background:#6c5ce7; color:#fff; padding:3px 10px; border-radius:8px; font-weight:bold; font-size:0.9rem; }
+.hidden-rank { background:#f39c12; }
+.stock-name { font-size:1.2rem; font-weight:bold; color:#ffffff; }
+.stock-signal { padding:3px 12px; border-radius:8px; font-size:0.85rem; font-weight:bold; }
+.signal-positive { background:#ff6b6b33; color:#ff6b6b; }
+.signal-negative { background:#339af033; color:#339af0; }
+.signal-neutral { background:#ffd93d33; color:#ffd93d; }
+.overlap-badge { background:#00b89433; color:#00b894; padding:3px 10px; border-radius:8px; font-size:0.8rem; }
+
+.stock-sources { margin-bottom:10px; }
+.source-tag { display:inline-block; background:#2a2a3e; color:#aaa; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.8rem; }
+
+.price-box { background:#1e1e2e; border-radius:8px; padding:10px 15px; margin:10px 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.current-price { font-size:1.1rem; font-weight:bold; color:#fff; }
+.price-up { color:#ff6b6b; font-weight:bold; }
+.price-down { color:#339af0; font-weight:bold; }
+.price-note { color:#888; font-size:0.9rem; }
+
+.stock-info-grid { display:flex; flex-direction:column; gap:14px; margin:15px 0; }
+.info-block { background:#1a1a2e; border-radius:8px; padding:14px 16px; }
+.info-label { color:#6c5ce7; font-size:0.9rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.info-text { color:#ccc; font-size:0.9rem; line-height:1.8; }
+
+.chart-icon { cursor:pointer; font-size:0.85rem; background:#2a2a3e; color:#aaa; padding:3px 10px; border-radius:6px; margin-left:8px; transition:all 0.2s; display:inline-block; }
+.chart-icon:hover { background:#6c5ce7; color:#fff; }
+
+.stock-reasons { border-top:1px solid #2a2a3e; padding-top:14px; margin-top:14px; }
+.reasons-title { color:#888; font-size:0.85rem; font-weight:bold; margin-bottom:10px; }
+.reason-item { background:#1a1a2e; border-radius:8px; padding:12px 14px; margin-bottom:8px; }
+.reason-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.reason-source { color:#6c5ce7; font-size:0.85rem; font-weight:bold; }
+.source-link { color:#00b894; font-size:0.8rem; text-decoration:none; background:#00b89415; padding:2px 8px; border-radius:4px; transition:all 0.2s; }
+.source-link:hover { background:#00b89433; color:#fff; }
+.reason-detail { color:#bbb; font-size:0.88rem; line-height:1.7; margin-top:4px; }
+
+.final-summary { background:#141420; border-radius:12px; padding:22px; color:#ccc; line-height:1.9; font-size:0.95rem; white-space:pre-line; }
+
+.disclaimer { text-align:center; color:#666; font-size:0.8rem; margin-top:40px; padding:20px; border-top:1px solid #2a2a3e; }
+.settings-btn { position:fixed; bottom:20px; right:20px; background:#2a2a3e; color:#888; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.8rem; z-index:100; }
+.settings-btn:hover { background:#3a3a4e; color:#fff; }
+
+@media (max-width:600px) {
+    body { padding:12px; }
+    .header h1 { font-size:1.4rem; }
+    .stock-name { font-size:1rem; }
+    .stock-header { gap:6px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>&#x1F4CA; 주식 투자 AI 브리핑</h1>
+    <div class="subtitle">&#x1F4E1; 뉴스 &#xB7; 경제방송 &#xB7; 유튜브 &#xB7; 애널리스트 보고서 분석</div>
+    <div class="date">2026-04-11 | AI 자동 분석 리포트</div>
+</div>
+
+<div class="section">
+    <h2 class="section-title">&#x1F30F; 시장 종합 요약</h2>
+    <div class="market-summary"><div class="summary-block"><h3 class="summary-subtitle">미·이란 2주 휴전 합의</h3><p class="summary-text">중동 전쟁이 2주간 휴전으로 전환되면서 시장은 리스크 완화 신호로 해석하고 있습니다. WTI 유가는 90~110달러 박스권으로 안정화될 전망이나, 완전한 종전 가능성은 낮아 변동성은 지속될 것으로 보입니다. 휴전 기대감에 코스피는 5900선을 회복하며 2% 상승했고, 재건주와 방산주가 동반 상승했습니다.</p></div>
+<div class="summary-block"><h3 class="summary-subtitle">한국은행 기준금리 2.50% 7회 연속 동결</h3><p class="summary-text">이창용 총재 마지막 금통위에서 기준금리를 2.50%로 유지했습니다. 중동 사태로 인한 경제 불확실성과 환율 상승, 물가 압박이 지속되면서 통화정책 여력을 보존했습니다. 다음 금통위부터는 신현송 신임 총재가 이끌 예정이며, 향후 통화정책 방향에 변화 가능성이 주목됩니다.</p></div>
+<div class="summary-block"><h3 class="summary-subtitle">삼성전자·SK하이닉스 반도체 재평가</h3><p class="summary-text">메모리 반도체의 장기공급계약(LTA) 체결과 HBM 시장에서의 기술 우위가 부각되면서 반도체 대장주들이 강세를 보이고 있습니다. 특히 HBM4에서 삼성전자의 경쟁력 강화와 AI 인프라 확산이 새로운 성장 동력으로 작용할 것으로 예상됩니다. 삼성전자 20만원, SK하이닉스 100만원 시대 전망도 제기되고 있습니다.</p></div>
+</div>
+</div>
+
+<div class="section">
+    <h2 class="section-title">&#x1F525; 주목 섹터</h2>
+    <div><span class="sector-badge">반도체</span>
+<span class="sector-badge">건설</span>
+<span class="sector-badge">방산</span>
+</div>
+</div>
+
+<div class="section">
+    <h2 class="section-title">&#x1F3AF; 추천 종목</h2>
+    
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#1</span>
+                <span class="stock-name">삼성전자</span>
+                <span class="stock-signal signal-positive">긍정</span>
+                <span class="overlap-badge">2개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">경제방송</span><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">글로벌 반도체 1위 기업으로 메모리 반도체와 시스템 반도체를 제조합니다. 최근 HBM4 기술력 향상과 AI 반도체 시장 확산으로 실적 개선이 기대되고 있으며, 장기공급계약 체결로 수익성 안정화가 예상됩니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">휴전 기대감과 함께 반도체 재평가 흐름 속에서 강세를 보이고 있습니다. 기술적으로도 주요 저항선을 돌파하며 상승 모멘텀이 확산되고 있어 20만원 돌파 가능성이 제기되고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">HBM4에서의 기술 우위 확보, AI 인프라 확산에 따른 수요 증가, 메모리 가격 상승과 장기공급계약 체결, 파운드리 사업의 수주 확대 등이 주요 상승 요인으로 작용하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">중동 전쟁 재확전 시 글로벌 공급망 차질 우려, 중국 반도체 정책 변화, 메모리 가격 변동성, AI 투자 둔화 가능성 등이 주요 리스크 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=YkltOqZLrN4" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">HBM 전쟁에서 삼성전자가 SK하이닉스 실적을 뛰어넘을 수 있다는 전망과 함께 상한가 전망까지 제기</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 달란트투자</span> <a href="https://www.youtube.com/watch?v=9_zjoZnVgC8" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">삼성전자에 신의 한 수가 터졌다며 엔비디아가 초비상 걸렸다는 분석과 함께 상한가 충격 전망</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 전인구경제연구소</span> <a href="https://www.youtube.com/watch?v=X1oGP3234Ko" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">HBM 전쟁의 최후 승자가 삼성전자가 될 수 있다는 분석과 함께 반도체 시장 전망 제시</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#2</span>
+                <span class="stock-name">SK하이닉스</span>
+                <span class="stock-signal signal-positive">긍정</span>
+                <span class="overlap-badge">2개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">경제방송</span><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">메모리 반도체 전문 기업으로 HBM 분야에서 세계 최고 수준의 기술력을 보유하고 있습니다. AI 반도체 수요 급증으로 HBM 제품의 매출 비중이 확대되고 있으며, 엔비디아 등 주요 고객사와의 장기 계약을 통해 안정적 성장이 예상됩니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">반도체 업황 개선과 HBM 수요 증가로 강세를 지속하고 있습니다. 100만원 돌파 기대감이 높아지면서 투자자들의 관심이 집중되고 있으며, 기술적 분석에서도 상승 추세가 확인되고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">HBM 시장에서의 기술 리더십, AI 반도체 수요 폭증, 주요 고객사와의 장기공급계약 체결, DDR5 등 차세대 메모리 제품 출시 등이 성장 동력으로 작용하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">메모리 가격 변동성, 중국 시장 의존도, 경쟁사 기술 추격, 글로벌 경기 둔화에 따른 수요 감소 우려 등이 주요 위험 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=YkltOqZLrN4" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">삼성전자와 함께 반도체 재평가 흐름의 핵심 종목으로 언급되며 100만원 시대 전망</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 815머니톡</span> <a href="https://www.youtube.com/watch?v=gR1qbJyTXKI" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">역대급 낸드 쇼티지로 삼성전자, SK하이닉스가 웃는 상황이며 지금 사야 할 이유 제시</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#3</span>
+                <span class="stock-name">에코프로</span>
+                <span class="stock-signal signal-neutral">중립</span>
+                <span class="overlap-badge">2개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">경제방송</span><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">2차전지 양극재 전문 기업으로 리튬이온배터리 핵심 소재를 생산합니다. 글로벌 배터리 업체들과의 공급계약을 확대하고 있으며, 헝가리 공장 등 해외 생산기지 구축을 통해 글로벌 경쟁력 강화에 나서고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">전기차 시장 부진으로 조정을 받았으나, 중국발 양극재 가격 상승과 글로벌 공급망 재편 수혜 기대감으로 반등 모멘텀을 찾고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">헝가리 공장 가동 본격화, 양극재 가격 상승, ESS 시장 확대, 유럽 배터리 시장 성장, IRA 정책 수혜 등이 성장 동력으로 작용하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">전기차 수요 둔화 지속 우려, 중국 업체와의 가격 경쟁, 원자재 가격 변동성, 고객사 다변화 필요성 등이 주요 위험 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=uWw3vqhjhuU" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">2차전지 관련주로 언급되며 현재 조정 국면에서 장기 보유 전략 제시</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 815머니톡</span> <a href="https://www.youtube.com/watch?v=8DaZN-Kk6Oc" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">에코프로 헝가리 공장 중요성이 부각되면서 배터리 기업들 중 주목할 곳으로 언급</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#4</span>
+                <span class="stock-name">기아</span>
+                <span class="stock-signal signal-positive">긍정</span>
+                <span class="overlap-badge">2개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">애널리스트리포트</span><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">현대차그룹 계열 완성차 업체로 디자인 경쟁력과 전기차 기술력을 바탕으로 글로벌 시장에서 성장하고 있습니다. CID 2026을 통해 자율주행과 SDV 기반 미래 전략을 공개하며 기술 혁신을 강화하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">CID 2026 발표 이후 미래 기술에 대한 기대감으로 상승세를 보이고 있습니다. 현대차와는 차별화된 움직임을 나타내며 투자자들의 관심이 높아지고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">CID 2026 공개로 미래 기술 로드맵 제시, 전기차 라인업 확대, 자율주행 기술 개발 가속화, SDV 플랫폼 구축, 글로벌 시장 확대 등이 주요 상승 요인입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">전기차 시장 경쟁 심화, 기술 개발 지연 가능성, 원자재 가격 상승, 환율 변동, 중국 시장 의존도 등이 주요 위험 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[애널리스트리포트] SK증권</span>
+                </div>
+                <p class="reason-detail">기아 CID 2026에서 자율주행·SDV 기반 미래 생태계 구축 전략이 긍정적으로 평가</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[애널리스트리포트] 유진투자증권</span>
+                </div>
+                <p class="reason-detail">기아 2026 CID를 Good to Smart라고 평가하며 기술 혁신 방향성 긍정적 평가</p>
+            </div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 815머니톡</span>
+                </div>
+                <p class="reason-detail">기아 인베스터데이 발표 내용이 시장에서 긍정적으로 받아들여지고 있다고 분석</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#5</span>
+                <span class="stock-name">현대건설</span>
+                <span class="stock-signal signal-positive">긍정</span>
+                <span class="overlap-badge">1개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">경제방송</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">국내 대표 건설사로 토목, 건축, 플랜트 사업을 영위하고 있습니다. 중동 재건 수요와 원전 건설 프로젝트 참여 기대감으로 주목받고 있으며, 해외 플랜트 수주 확대를 통한 성장 동력 확보에 나서고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">중동 휴전 합의 이후 재건 수요 기대감으로 건설주 전반이 상승세를 보이면서 동반 강세를 나타내고 있습니다. 200,000원 목표가를 향한 상승 모멘텀이 형성되고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">중동 재건 프로젝트 수주 기대, 원전 건설 참여 확대, 정부의 인프라 투자 확대, 해외 플랜트 시장 회복 등이 주요 상승 요인으로 작용하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">중동 정세 재불안 시 수주 지연 우려, 국내 건설 경기 부진, 자재비 상승 압박, 부동산 PF 부실 확산 우려 등이 주요 리스크입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=uWw3vqhjhuU" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">원전과 중동 재건, 플랜트 수혜로 1차 목표가 200,000원, 2차 목표가 220,000~240,000원 제시</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#6</span>
+                <span class="stock-name">한화시스템</span>
+                <span class="stock-signal signal-positive">긍정</span>
+                <span class="overlap-badge">1개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">경제방송</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">국내 대표 방산업체로 레이더, 전자전 장비, 지휘통제시스템 등을 제조하는 기업입니다. K-방산 수출 확대와 중동 전쟁으로 인한 방산 수요 증가로 주목받고 있으며, KF-21 등 차세대 전투기 관련 사업에도 참여하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">방산주 전반의 상승세 속에서 꾸준한 강세를 보이고 있습니다. 중동 전쟁과 K-방산 수출 확대 기대감이 지속되면서 투자자들의 관심이 높아지고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">K-방산 수출 확대, 중동 방산 수요 증가, KF-21 양산 본격화, 차세대 전자전 시스템 개발, 우크라이나 전쟁 장기화에 따른 방산 수요 지속 등이 성장 동력입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">중동 전쟁 조기 종료 시 방산 수요 둔화, 수출 지연 우려, 국제 정세 변화에 따른 수주 불확실성, 경쟁 심화 등이 주요 위험 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=uWw3vqhjhuU" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">방산 관련주로 언급되며 중동 전쟁 이후 방산 수요 증가 수혜 기대</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#7</span>
+                <span class="stock-name">LG에너지솔루션</span>
+                <span class="stock-signal signal-neutral">중립</span>
+                <span class="overlap-badge">1개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">글로벌 2차전지 선도 기업으로 전기차용 배터리를 주력으로 생산하고 있습니다. 북미 전기차 시장 둔화에도 불구하고 ESS와 LFP 배터리 생산 확대를 통해 사업 다각화를 추진하고 있으며, 중국 업체와의 경쟁이 치열한 상황입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">전기차 시장 둔화 우려로 조정을 받았으나, 고유가 상황이 전기차 수요 회복에 도움이 될 것이라는 기대감으로 반등 시도를 보이고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">고유가로 인한 전기차 수요 회복 기대, ESS 시장 확대, LFP 배터리 양산 본격화, 북미 IRA 정책 수혜 지속 등이 긍정적 요인입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">전기차 시장 성장 둔화, 중국 배터리 업체와의 가격 경쟁 심화, 원자재 가격 변동성, 테슬라 등 주요 고객사의 수요 변동 등이 주요 리스크입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 815머니톡</span> <a href="https://www.youtube.com/watch?v=8DaZN-Kk6Oc" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">고유가가 전기차 캐즘 돌파의 열쇠가 될 수 있다는 분석과 함께 배터리 관련주 주목</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card">
+            <div class="stock-header">
+                <span class="stock-rank">#8</span>
+                <span class="stock-name">현대차</span>
+                <span class="stock-signal signal-neutral">중립</span>
+                <span class="overlap-badge">1개 채널 언급</span>
+            </div>
+            <div class="stock-sources"><span class="source-tag">유튜브</span></div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">국내 1위 완성차 업체로 전기차, 수소차 등 미래차 기술 개발에 집중하고 있습니다. 로봇 사업과 자율주행 기술 개발을 통한 사업 다각화를 추진하고 있으며, 글로벌 전기차 시장에서의 경쟁력 강화에 나서고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">전기차 시장 부진 우려로 약세를 보였으나, 로봇 사업과 자율주행 기술 개발 기대감으로 반등을 시도하고 있습니다. 기아와는 다른 움직임을 보이고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">로봇 사업 본격화, 자율주행 기술 상용화, SDV 플랫폼 개발, 수소차 시장 확대, 중동 시장 진출 확대 등이 성장 동력으로 평가됩니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">전기차 시장 성장 둔화, 중국 업체와의 경쟁 심화, 반도체 공급 차질, 원자재 가격 상승, 글로벌 경기 둔화 등이 주요 리스크입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[유튜브] 815머니톡</span> <a href="https://www.youtube.com/watch?v=O2asdEtgRyA" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">현대차와 기아가 따로 움직이는 상황에서 로봇주와 함께 전망이 긍정적이라고 분석</p>
+            </div>
+            </div>
+        </div>
+</div>
+
+<div class="section">
+    <h2 class="section-title">&#x1F48E; 히든픽</h2>
+    
+        <div class="stock-card hidden-card">
+            <div class="stock-header">
+                <span class="stock-rank hidden-rank">H1</span>
+                <span class="stock-name">&#x1F48E; 삼성전기</span>
+                <span class="stock-signal signal-positive">긍정</span>
+            </div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F3E2; 기업 소개</div><div class="info-text">삼성그룹 계열의 전자부품 전문 기업으로 MLCC(적층세라믹콘덴서), 카메라모듈, PCB 등을 주력 제품으로 생산합니다. 특히 MLCC 분야에서는 글로벌 1위 점유율을 보유하고 있으며, 최근 엔비디아 공급망에 합류하면서 AI 반도체 수혜주로 주목받고 있습니다. 스마트폰과 자동차 전장용 부품 수요 증가로 실적 개선이 기대되는 상황입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 주목 이유</div><div class="info-text">엔비디아 공급망 합류로 AI 반도체 부품 수요 급증, MLCC 시장에서의 독점적 지위 활용, 자동차 전장화 확산에 따른 수요 증가, 5G 통신장비 확산 수혜 등이 주목 이유입니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">중국 업체와의 가격 경쟁 심화, 스마트폰 시장 성장 둔화, 원자재 가격 변동성, 환율 변동에 따른 수익성 압박 등이 주요 위험 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 한국경제TV</span> <a href="https://www.youtube.com/watch?v=YxHUB9U9tVg" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">삼성전기의 엔비디아 공급망 합류 소식이 AI 밸류체인 확장의 핵심 시그널로 분석됨</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card hidden-card">
+            <div class="stock-header">
+                <span class="stock-rank hidden-rank">H2</span>
+                <span class="stock-name">&#x1F48E; 대한항공</span>
+                <span class="stock-signal signal-neutral">중립</span>
+            </div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F3E2; 기업 소개</div><div class="info-text">국내 대표 항공사로 여객 및 화물 운송 서비스를 제공합니다. 코로나19 이후 국제선 수요 회복과 함께 실적 개선을 보이고 있으며, 최근에는 중동 노선 운항 재개와 관련하여 시장의 관심을 받고 있습니다. 아시아나항공 인수 통합 과정에서 항공업계 재편을 주도하고 있으며, 물류 사업 강화를 통한 사업 다각화도 추진하고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 주목 이유</div><div class="info-text">국제선 수요 본격 회복, 중동 노선 운항 재개 기대감, 아시아나항공 인수 통합 시너지 효과, 화물 운송 수요 증가 등이 투자 포인트로 부각되고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">유가 상승에 따른 연료비 부담 증가, 중동 정세 불안 시 노선 운항 차질, 항공업계 경쟁 심화, 경기 둔화 시 수요 감소 우려 등이 주요 리스크입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[경제방송] 머니투데이 방송</span> <a href="https://www.youtube.com/watch?v=sJKbyvcM9Xs" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">대한항공 vs 한패스 비교 분석에서 관심 포인트로 언급되며 항공업계 회복 수혜주로 평가</p>
+            </div>
+            </div>
+        </div>
+        <div class="stock-card hidden-card">
+            <div class="stock-header">
+                <span class="stock-rank hidden-rank">H3</span>
+                <span class="stock-name">&#x1F48E; 두나무</span>
+                <span class="stock-signal signal-positive">긍정</span>
+            </div>
+            
+            <div class="stock-info-grid">
+                <div class="info-block"><div class="info-label">&#x1F3E2; 기업 소개</div><div class="info-text">국내 1위 가상자산 거래소 업비트를 운영하는 핀테크 기업입니다. 최근 영업정지 처분 취소 소송에서 승소하면서 규제 리스크가 일부 해소되었고, 블록체인 분석 기술과 관련된 사업 확장을 모색하고 있습니다. 가상자산 시장의 제도화와 함께 안정적인 수익 구조를 갖추고 있어 관련 업계에서 주목받고 있습니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x1F680; 주목 이유</div><div class="info-text">영업정지 소송 승소로 규제 리스크 완화, 가상자산 시장 제도화 진전, 블록체인 분석 기술 수요 증가, 해외 사업 확장 가능성 등이 성장 동력으로 평가됩니다.</div></div>
+                <div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">가상자산 규제 강화 가능성, 시장 변동성에 따른 거래량 감소, 경쟁사 등장, 해킹 등 보안 사고 위험 등이 주요 우려 요인입니다.</div></div>
+            </div>
+            <div class="stock-reasons">
+                <div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>
+            <div class="reason-item">
+                <div class="reason-header">
+                    <span class="reason-source">[뉴스] 머니투데이 방송</span> <a href="https://www.youtube.com/watch?v=foFFQry0-Qk" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>
+                </div>
+                <p class="reason-detail">업비트 승소로 거래소 책임 범위는 제한됐지만 규제 기준 불명확성이 드러나면서 블록체인 분석 기술 주목</p>
+            </div>
+            </div>
+        </div>
+</div>
+
+<div class="section">
+    <h2 class="section-title">&#x1F4DD; AI 최종 요약</h2>
+    <div class="final-summary">미·이란 휴전 합의로 최악의 시나리오는 피했지만 완전한 종전 가능성은 낮아 변동성이 지속될 전망입니다. 이런 환경에서는 방어적 성장주 위주의 포트폴리오 구성이 필요합니다. 반도체는 휴전 기대감과 펀더멘털 개선이 동시에 작용하면서 삼성전자, SK하이닉스를 중심으로 재평가가 본격화될 것으로 예상됩니다. 건설·방산주는 중동 재건과 K-방산 수출 확대 테마로 단기 상승 여력이 있으나 과열 구간에서는 차익실현도 고려해야 합니다. 투자 전략으로는 반도체 대장주는 핵심 보유하되, 테마주는 분할매수로 리스크를 관리하고, 2차전지는 고유가 수혜 관점에서 선별적 접근이 바람직합니다.</div>
+</div>
+
+<div class="disclaimer">
+    본 브리핑은 AI가 공개 데이터를 분석한 것으로 투자 권유가 아닙니다.<br>
+    투자 판단의 책임은 투자자 본인에게 있습니다.
+</div>
+
+<button class="settings-btn" onclick="openSettings()">&#x2699;&#xFE0F; 설정</button>
+
+
+    <div id="settings-panel" style="display:none; padding:20px; background:#1a1a2e; border-radius:12px; margin-top:20px;">
+        <h3 style="color:#e0e0e0;">&#x2699;&#xFE0F; 채널 설정</h3>
+        <p style="color:#888;">이 패널에서 데이터 수집 채널을 관리할 수 있습니다.</p>
+        <p style="color:#666; font-size:0.85rem;">GitHub: kunil-choi/stock-briefing</p>
+    </div>
+    <script>
+    function openSettings() {
+        var pw = prompt("비밀번호를 입력하세요:");
+        if (pw === "stock2026!") {
+            document.getElementById("settings-panel").style.display = "block";
+        } else if (pw !== null) {
+            alert("비밀번호가 틀렸습니다.");
+        }
+    }
+    </script>
+
+<script>
+var chartData = {};
+
+function openChartWindow(stockName, prefix) {
+    var rankEl = event.target.closest('[data-chart]');
+    var rank = rankEl ? rankEl.getAttribute('data-chart') : '';
+    var b64 = chartData[rank];
+    if (!b64) {
+        alert(stockName + ' 차트 데이터가 없습니다.');
+        return;
+    }
+    var win = window.open('', '_blank', 'width=700,height=500,scrollbars=yes');
+    win.document.write('<html><head><title>' + stockName + ' - 14일 주가 차트</title>');
+    win.document.write('<style>body{background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}');
+    win.document.write('h2{color:#fff;font-family:sans-serif;margin-bottom:15px;}');
+    win.document.write('img{max-width:100%;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}</style></head><body>');
+    win.document.write('<h2>' + stockName + ' - 14일 주가 차트</h2>');
+    win.document.write('<img src="data:image/png;base64,' + b64 + '" />');
+    win.document.write('</body></html>');
+    win.document.close();
+}
+</script>
+
+</body>
+</html>

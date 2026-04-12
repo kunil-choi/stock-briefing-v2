@@ -1,0 +1,232 @@
+{
+  "broadcast": {
+    "한국경제TV": {
+      "id": "UCF8AeLlUbEpKju6v1H6p8Eg",
+      "url": "https://www.youtube.com/@hkwowtv"
+    },
+    "SBS Biz": {
+      "id": "UCbMjg2EvXs_RUGW-KrdM3pw",
+      "url": "https://www.youtube.com/@SBSBiz2021"
+    },
+    "서울경제TV": {
+      "id": "UCZKBS37Y0TmrFBfYBuBibtQ",
+      "url": "https://www.youtube.com/@sentv"
+    },
+    "머니투데이 방송(MTN)": {
+      "id": "UClErHbdZKUnD1NyIUeQWvuQ",
+      "url": "https://www.youtube.com/@mtn"
+    },
+    "매일경제TV": {
+      "id": "UCnMtEMnsGFjQgLJEEkMSHhQ",
+      "url": "https://www.youtube.com/@MKeconomy_TV"
+    },
+    "KBS 1라디오(성공예감 이대호)": {
+      "id": "UCMLJc_D3jgFcS_48G7i4V0A",
+      "url": "https://www.youtube.com/@KBS_1Radio"
+    }
+  },
+  "youtuber": {
+    "슈카월드": {
+      "id": "UCsJ6RuBiTVWOlN3n3-BbELg",
+      "url": "https://www.youtube.com/@syukaworld"
+    },
+    "삼프로TV": {
+      "id": "UChlv4GSd7OQl3js-jkLOnFA",
+      "url": "https://www.youtube.com/@3protv"
+    },
+    "김작가 TV": {
+      "id": "UCvil4OAt-zShzkKHsg9EQAw",
+      "url": "https://www.youtube.com/@lucky_tv"
+    },
+    "신사임당": {
+      "id": "UCep5LSsJGJfuYjU8F4bXjzA",
+      "url": "https://www.youtube.com/@SSID"
+    },
+    "체슬리TV": {
+      "id": "UCXST0Hq6CAmG0dmo3jgrlEw",
+      "url": "https://www.youtube.com/@chesleytv"
+    },
+    "채부심": {
+      "id": "UCD9vzSxZ69pjcnf8hgCQXVQ",
+      "url": "https://www.youtube.com/@chaeboosim"
+    },
+    "KBS 경제한방": {
+      "id": "UCn_38aaCktkBLPv3EtfmiUA",
+      "url": "https://www.youtube.com/@e-hanbang"
+    },
+    "하와이 대저택": {
+      "id": "UCO-e0J-Qsilkv_4tBa3LyYw",
+      "url": "https://www.youtube.com/@hawaiidjt"
+    }
+  },
+  "top50": {
+    "슈카월드": {
+      "id": "UCsJ6RuBiTVWOlN3n3-BbELg",
+      "url": "https://www.youtube.com/@syukaworld"
+    },
+    "삼프로TV": {
+      "id": "UChlv4GSd7OQl3js-jkLOnFA",
+      "url": "https://www.youtube.com/@3protv"
+    },
+    "김작가 TV": {
+      "id": "UCvil4OAt-zShzkKHsg9EQAw",
+      "url": "https://www.youtube.com/@lucky_tv"
+    },
+    "삼성증권 Samsung POP": {
+      "id": "UCG1OBih5oOW8PbHTY811ebQ",
+      "url": "https://www.youtube.com/@samsungpop"
+    },
+    "월급쟁이부자들TV": {
+      "id": "UCDSj40X9FFUAnx1nv7gQhcA",
+      "url": "https://www.youtube.com/@weolbu_official"
+    },
+    "신사임당": {
+      "id": "UCep5LSsJGJfuYjU8F4bXjzA",
+      "url": "https://www.youtube.com/@SSID"
+    },
+    "채널K 키움증권": {
+      "id": "UCZW1d7B2nYqQUiTiOnkirrQ",
+      "url": "https://www.youtube.com/@kiwoomchk"
+    },
+    "미래에셋 스마트머니": {
+      "id": "UC1ilBxWP5sIka51VHDmR3Kw",
+      "url": "https://www.youtube.com/@SmartMoney0"
+    },
+    "달란트투자": {
+      "id": "UCBM86JVoHLqg9irpR2XKvGw",
+      "url": "https://www.youtube.com/@talentinvestment"
+    },
+    "재테크읽어주는파일럿": {
+      "id": "UCaWi2foADm_lKAKnmeQwLSA",
+      "url": "https://www.youtube.com/@pilotmoney"
+    },
+    "전인구경제연구소": {
+      "id": "UCznImSIaxZR7fdLCICLdgaQ",
+      "url": "https://www.youtube.com/@moneydo"
+    },
+    "언더스탠딩": {
+      "id": "UCIUni4ScRp4mqPXsxy62L5w",
+      "url": "https://www.youtube.com/@understanding."
+    },
+    "815머니톡": {
+      "id": "UCCG6BEYjfQMGzypJw2EJCDQ",
+      "url": "https://www.youtube.com/@815moneytalk"
+    },
+    "박종훈의 지식한방": {
+      "id": "UCOB62fKRT7b73X7tRxMuN2g",
+      "url": "https://www.youtube.com/@kpunch"
+    },
+    "웅달 책방": {
+      "id": "UCbOIEn95Rvnk97KRtSFqvbQ",
+      "url": "https://www.youtube.com/@woong-dal"
+    },
+    "소수몽키": {
+      "id": "UCKCgsA2eDWCmV88j_1Gs2Uw",
+      "url": "https://www.youtube.com/@sosumonkey"
+    },
+    "박곰희TV": {
+      "id": "UCr7XsrSrvAn_WcU4kF99bbQ",
+      "url": "https://www.youtube.com/@park_gomhee"
+    },
+    "E트렌드": {
+      "id": "UCpsfkRRT7L2nBnizBn_u9YA",
+      "url": "https://www.youtube.com/@E_TREND"
+    },
+    "와이스트릿": {
+      "id": "UC8RMJNzCl5XOmOsYPYH0zaQ",
+      "url": "https://www.youtube.com/@Ystreet"
+    },
+    "한경 글로벌마켓": {
+      "id": "UCiBFqkmTSjzEZjCLBiGcACw",
+      "url": "https://www.youtube.com/@hkglobalmarket"
+    },
+    "내일은 투자왕 김단테": {
+      "id": "UCKTMvIu9a4VGSrpWy-8bUrQ",
+      "url": "https://www.youtube.com/@김단테"
+    },
+    "기릿의 주식노트": {
+      "id": "UCw8pcmyPWGSik7bjJpeINlA",
+      "url": "https://www.youtube.com/@코스닥"
+    },
+    "오선의 미국증시 라이브": {
+      "id": "UC7ZZGpFYFXbO3jcUhgsHKMg",
+      "url": "https://www.youtube.com/@futuresnow"
+    },
+    "힐링여행자": {
+      "id": "UCHpGooMnVgnILywqrpqvZcQ",
+      "url": "https://www.youtube.com/@힐링여행자미국주식"
+    },
+    "창원개미TV": {
+      "id": "UCT2EIwBbMwpTn48ku1g9AYA",
+      "url": "https://www.youtube.com/@changwonant"
+    },
+    "선대인TV": {
+      "id": "UCaoiMB2WQPQ-hIEs9CbHM4A",
+      "url": "https://www.youtube.com/@sundaein"
+    },
+    "할 수 있다! 알고 투자": {
+      "id": "UCSuE3VD_ynVXrYKEBFMvCTA",
+      "url": "https://www.youtube.com/@강환국"
+    },
+    "매경 월가월부": {
+      "id": "UC-sGkuPnFCF8mkN0QKRZ7Aw",
+      "url": "https://www.youtube.com/@MK_Invest"
+    },
+    "부자회사원": {
+      "id": "UCnellvbbGXMZpXJC4vYD3Lg",
+      "url": "https://www.youtube.com/@부자회사원"
+    },
+    "시윤주식": {
+      "id": "UCdUEm8T6G0b-evJP1sMJNJg",
+      "url": "https://www.youtube.com/@siyunstock"
+    },
+    "홍춘욱의 경제강의노트": {
+      "id": "UCmNbuxmvRVv9OcdAO0cpLnw",
+      "url": "https://www.youtube.com/@hongchunwook"
+    },
+    "이효석아카데미": {
+      "id": "UCf8GIKNUlGBKfpGh2TLVJ1w",
+      "url": "https://www.youtube.com/@hs_academy"
+    },
+    "경제 읽어주는 남자 김광석TV": {
+      "id": "UC3pfEoxaRDT6hvZZjpHu7Tg",
+      "url": "https://www.youtube.com/@경읽남_김광석TV"
+    },
+    "김영익의 경제스쿨": {
+      "id": "UCa4L3qf5Jk0V9_RBdHMEEjQ",
+      "url": "https://www.youtube.com/@kimyoungik"
+    },
+    "강민우 돈깡TV": {
+      "id": "UCI6C5V4J8FWRcLcOdh1yElw",
+      "url": "https://www.youtube.com/@돈이깡패다"
+    },
+    "월가아재의 과학적 투자": {
+      "id": "UCpqD9_OJNtF6suPpi6mOQCQ",
+      "url": "https://www.youtube.com/@wsaj"
+    },
+    "슈퍼개미 이세무사TV": {
+      "id": "UCowHl0BGalL433P6bCBgeKA",
+      "url": "https://www.youtube.com/@leesemusaTV"
+    },
+    "머니올라 KBS": {
+      "id": "UCAySceX4rbSr408F1dUpuUw",
+      "url": "https://www.youtube.com/@moneyolla"
+    },
+    "체슬리TV": {
+      "id": "UCXST0Hq6CAmG0dmo3jgrlEw",
+      "url": "https://www.youtube.com/@chesleytv"
+    },
+    "채부심": {
+      "id": "UCD9vzSxZ69pjcnf8hgCQXVQ",
+      "url": "https://www.youtube.com/@chaeboosim"
+    },
+    "KBS 경제한방": {
+      "id": "UCn_38aaCktkBLPv3EtfmiUA",
+      "url": "https://www.youtube.com/@e-hanbang"
+    },
+    "하와이 대저택": {
+      "id": "UCO-e0J-Qsilkv_4tBa3LyYw",
+      "url": "https://www.youtube.com/@hawaiidjt"
+    }
+  }
+}
