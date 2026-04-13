@@ -666,8 +666,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
         "12. 뉴스 데이터를 반드시 적극 반영하세요. 뉴스에서 언급된 종목, 이슈, 시장 동향을 다른 채널(유튜브, 경제방송 등)과 교차 검증하여 분석에 포함하세요.\n"
         "13. 각 종목의 reasons에 뉴스 출처가 있으면 반드시 포함하세요. source_type은 \"뉴스\"로, source_name은 해당 언론사명으로, source_url은 기사 URL로 기재하세요.\n"
         "14. market_summary 작성 시 뉴스 기사의 팩트(수치, 정책, 이벤트 등)를 우선적으로 활용하세요. 뉴스는 가장 신뢰도 높은 1차 소스입니다.\n"
-        "15. hidden_picks의 target_price 필드에는 증권사 애널리스트 보고서의 목표가, 또는 유튜브/경제방송에서 언급된 매수·매도·적정 가격을 출처와 함께 기재하세요. 확인되지 않으면 빈 문자열로 두세요.\n"
-        "16. 절대로 '특정 종목', '특정 주식', '특정 기업', '한 종목', '일부 종목' 같은 모호한 표현을 사용하지 마세요. 원본 데이터에서 언급된 실제 종목명(예: SK하이닉스, 두산에너빌리티 등)을 반드시 그대로 기재하세요. 원본에서 종목명을 확인할 수 없는 경우에만 '미공개 종목'이라고 표기하고, 그 외에는 반드시 구체적 종목명을 적으세요.\n\n"
+        "15. 절대로 '특정 종목', '특정 주식', '특정 기업', '한 종목', '일부 종목' 같은 모호한 표현을 사용하지 마세요. 원본 데이터에서 언급된 실제 종목명(예: SK하이닉스, 두산에너빌리티 등)을 반드시 그대로 기재하세요. 원본에서 종목명을 확인할 수 없는 경우에만 '미공개 종목'이라고 표기하고, 그 외에는 반드시 구체적 종목명을 적으세요.\n\n"
         "JSON만 출력하고 다른 텍스트는 포함하지 마세요.\n\n"
         + CB + "json\n"
         "{\n"
@@ -904,11 +903,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + '<p class="reason-detail">' + rd + '</p>'
                 + '</div>')
 
-        # ★ target_price 블록 (주목 이유와 리스크 사이)
-        target_price_html = ""
-        if hp_target:
-            target_price_html = '<div class="info-block"><h4>&#x1F4B0; 매수·매도 적정가격</h4><p>' + hp_target + '</p></div>'
-
         # ★ signal 배지 제거
         hidden_html += ('<div class="hidden-pick-card">'
             + '<div class="stock-header">'
@@ -918,7 +912,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
             + hp_price_html
             + '<div class="info-block"><h4>&#x1F4CB; 기업 소개</h4><p>' + hp_desc + '</p></div>'
             + '<div class="info-block"><h4>&#x1F680; 주목 이유</h4><p>' + hp_catalyst + '</p></div>'
-            + target_price_html
             + '<div class="info-block"><h4>&#x26A0;&#xFE0F; 리스크</h4><p>' + hp_risk + '</p></div>'
             + '<div class="reasons-section"><h4>&#x1F4E2; 채널별 언급 내용</h4>' + hp_reasons_html + '</div>'
             + '</div>\n')
