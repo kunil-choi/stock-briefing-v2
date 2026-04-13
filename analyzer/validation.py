@@ -24,7 +24,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             _naver_cache[stock_name] = verify_stock_via_naver(stock_name)
         return _naver_cache[stock_name]
 
-    # ✅ 네이버 조회 실패 시 stock_map 폴백으로 코드 조회
     def _get_code(stock_name, naver_result):
         if naver_result and naver_result.get("code"):
             return naver_result["code"]
@@ -114,6 +113,15 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             verified_types = list(set(r["source_type"] for r in verified_reasons))
             stock["source_types"] = verified_types
             stock["overlap_count"] = len(verified_types)
+
+            # ✅ 검증-A 후 channel_counts / total_count를 실제 남은 reasons 기준으로 재계산
+            new_counts = {"뉴스": 0, "경제방송": 0, "유튜브": 0, "애널리스트": 0}
+            for r in verified_reasons:
+                st = r.get("source_type", "")
+                if st in new_counts:
+                    new_counts[st] += 1
+            stock["channel_counts"] = new_counts
+            stock["total_count"] = sum(new_counts.values())
 
         before = len(data["stocks"])
         data["stocks"] = [
@@ -306,6 +314,7 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                 "- 오류가 없으면 원본 JSON을 그대로 반환하세요\n"
                 "- 종목을 삭제하지 마세요. 내용만 교정하세요\n"
                 "- source_url은 절대 변경하지 마세요\n"
+                "- channel_counts, total_count, overlap_count, rank는 절대 변경하지 마세요\n"
                 "- 반드시 JSON만 반환하세요"
             )
 
@@ -319,6 +328,7 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     for orig in data.get("stocks", []):
                         for corr in corrected.get("stocks", []):
                             if corr.get("name") == orig.get("name"):
+                                # ✅ 검증-A에서 재계산한 수치 필드 전부 원본으로 강제 복원
                                 for key in [
                                     "verified_price", "market", "naver_code",
                                     "chart_base64", "source_types",
@@ -326,7 +336,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                                     "channel_counts", "total_count",
                                 ]:
                                     corr[key] = orig.get(key)
-                                # ✅ source_url도 원본 보존
                                 for i, corr_r in enumerate(corr.get("reasons", [])):
                                     if i < len(orig.get("reasons", [])):
                                         corr_r["source_url"] = orig["reasons"][i].get("source_url", "")
@@ -358,7 +367,7 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     data["investment_strategy"] = corrected.get(
                         "investment_strategy", data.get("investment_strategy", "")
                     )
-                    print(f"[검증-C] 완료")
+                    print("[검증-C] 완료")
                 else:
                     print("[검증-C] JSON 파싱 실패 -> 원본 유지")
             else:
