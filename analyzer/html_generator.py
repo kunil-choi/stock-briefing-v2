@@ -95,15 +95,27 @@ def generate_html(data, channels_data=None, gh_repo=""):
         for st in source_types:
             source_tags += '<span class="source-tag">' + st + '</span>'
 
+        # ✅ 수정: change 값이 없거나 빈 문자열일 때 sign을 공백으로 처리
         price_info_text = ""
         if verified_price:
             p = verified_price
-            sign = "▲" if p.get("change", "").startswith("+") else "▼"
-            price_info_text = (
-                " (" + p["price"] + "원 "
-                + sign + p.get("change", "").lstrip("+-") + " "
-                + p.get("change_pct", "") + ")"
-            )
+            change_val = p.get("change", "")
+            if change_val.startswith("+"):
+                sign = "▲"
+            elif change_val.startswith("-"):
+                sign = "▼"
+            else:
+                sign = ""
+            change_display = change_val.lstrip("+-") if change_val else ""
+            change_pct_display = p.get("change_pct", "")
+            if sign and change_display:
+                price_info_text = (
+                    " (" + p["price"] + "원 "
+                    + sign + change_display + " "
+                    + change_pct_display + ")"
+                )
+            else:
+                price_info_text = " (" + p["price"] + "원)"
         elif market == "해외":
             price_info_text = " (해외 종목)"
 
@@ -203,14 +215,19 @@ def generate_html(data, channels_data=None, gh_repo=""):
         hp_price_html = ""
         if hp_verified:
             p = hp_verified
-            change_class = (
-                "price-up" if p.get("change", "").startswith("+") else "price-down"
-            )
+            # ✅ 수정: hidden pick도 동일하게 sign 방어 처리
+            change_val = p.get("change", "")
+            if change_val.startswith("+"):
+                change_class = "price-up"
+            elif change_val.startswith("-"):
+                change_class = "price-down"
+            else:
+                change_class = "price-note"
             hp_price_html = (
                 '<div class="price-box">'
                 '<span class="current-price">' + p["price"] + '&#xC6D0;</span>'
                 '<span class="' + change_class + '">'
-                + p.get("change", "") + ' (' + p.get("change_pct", "") + ')'
+                + (change_val + ' (' + p.get("change_pct", "") + ')' if change_val else "등락 정보 없음")
                 + '</span>'
                 '</div>'
             )
