@@ -67,13 +67,15 @@ def collect_news(rss_feeds: dict) -> list:
     for source_name, rss_url in rss_feeds.items():
         try:
             feed = feedparser.parse(rss_url)
-            collected = 0
+            # ✅ 수정: 본문 크롤링 전용 카운터를 별도로 관리
+            crawl_count = 0
+
             for entry in feed.entries[:30]:
                 published = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     published = datetime(*entry.published_parsed[:6])
 
-                # ✅ 수정: cutoff 기준으로 24시간 이내 기사만 수집
+                # 24시간 이내 기사만 수집
                 if published and published < cutoff:
                     continue
 
@@ -81,9 +83,11 @@ def collect_news(rss_feeds: dict) -> list:
                 rss_summary = entry.get("summary", "")
                 link = entry.get("link", "")
 
+                # ✅ 수정: crawl_count로 본문 크롤링 15건 제한을 정확히 제어
                 body = ""
-                if link and collected < 15:
+                if link and crawl_count < 15:
                     body = fetch_article_body(link, max_chars=1500)
+                    crawl_count += 1  # 크롤링 시도 시에만 카운트 증가
 
                 summary = body if len(body) > len(rss_summary) else rss_summary
 
@@ -95,7 +99,7 @@ def collect_news(rss_feeds: dict) -> list:
                     "link": link,
                     "published": published.isoformat() if published else "",
                 })
-                collected += 1
+
         except Exception as e:
             print(f"[뉴스수집 오류] {source_name}: {e}")
 
