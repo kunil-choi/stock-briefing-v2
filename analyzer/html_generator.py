@@ -59,7 +59,22 @@ def generate_html(data, channels_data=None, gh_repo=""):
         else:
             signal_class = "signal-neutral"
 
-        overlap_badge = '<span class="overlap-badge">' + str(overlap) + '개 채널 언급</span>'
+        # 수정 후 — 채널별 횟수 상세 표시
+        channel_counts = stock.get("channel_counts", {})
+        total_count = stock.get("total_count", overlap)
+
+        if channel_counts:
+           detail_parts = []
+        for ch in ["뉴스", "경제방송", "유튜브", "애널리스트"]:
+           cnt = channel_counts.get(ch, 0)
+        if cnt > 0:
+            detail_parts.append(ch + " " + str(cnt) + "회")
+            detail_str = " / ".join(detail_parts)
+            overlap_badge = ('<span class="overlap-badge">총 ' + str(total_count)
+                          + '회 언급 (' + detail_str + ')</span>')
+        else:
+            overlap_badge = '<span class="overlap-badge">' + str(overlap) + '개 채널 언급</span>'
+
         source_tags = ""
         for st in source_types:
             source_tags += '<span class="source-tag">' + st + '</span>'
