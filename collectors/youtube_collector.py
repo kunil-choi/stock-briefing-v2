@@ -94,7 +94,6 @@ def get_recent_videos_via_playlist(channel_id, api_key, hours=24, max_results=15
 
         items = data.get("items", [])
 
-        # 시간 필터링: cutoff 이후 영상만
         recent_items = []
         for item in items:
             snippet = item.get("snippet", {})
@@ -104,7 +103,6 @@ def get_recent_videos_via_playlist(channel_id, api_key, hours=24, max_results=15
             try:
                 published_dt = datetime.fromisoformat(published_str.replace("Z", "+00:00"))
                 if published_dt >= cutoff:
-                    # search.list와 동일한 형식으로 변환
                     video_id = snippet.get("resourceId", {}).get("videoId", "")
                     recent_items.append({
                         "id": {"videoId": video_id},
@@ -117,7 +115,6 @@ def get_recent_videos_via_playlist(channel_id, api_key, hours=24, max_results=15
                         }
                     })
                 else:
-                    # 최신순 정렬이므로, cutoff 이전이면 중단
                     break
             except Exception:
                 continue
@@ -153,7 +150,10 @@ def resolve_channel_id(channel_id_or_handle, api_key):
 
 
 def get_transcript(video_id, max_chars=2000):
-    """유튜브 영상 자막 추출"""
+    """
+    유튜브 영상 자막 추출.
+    ✅ youtube_transcript_api 버전 호환: dict / 객체 / str 모두 안전하게 처리
+    """
     if YouTubeTranscriptApi is None:
         return ""
     try:
@@ -165,9 +165,24 @@ def get_transcript(video_id, max_chars=2000):
                 transcript = transcript_list.find_generated_transcript(["ko"])
             except Exception:
                 return ""
+
         entries = transcript.fetch()
-        text = " ".join([e.get("text", e.get("value", "")) if isinstance(e, dict) else str(e) for e in entries])
-        return text[:max_chars]
+
+        # ✅ 수정: 객체(hasattr .text) / dict / str 모두 안전하게 텍스트 추출
+        texts = []
+        for e in entries:
+            if hasattr(e, "text"):
+                # 최신 버전: FetchedTranscriptSnippet 객체
+                texts.append(e.text)
+            elif isinstance(e, dict):
+                # 구버전: {"text": "...", "start": ..., "duration": ...}
+                texts.append(e.get("text", e.get("value", "")))
+            else:
+                # 예상치 못한 타입: 안전하게 건너뜀
+                continue
+
+        return " ".join(texts)[:max_chars]
+
     except Exception:
         return ""
 
@@ -223,11 +238,12 @@ def collect_broadcast_youtube():
     for name, channel_id in broadcast_channels.items():
         print(f"\n[방송] {name} ({channel_id})")
 
-        # 채널 ID가 UC로 시작하지 않으면 변환 시도
         if not channel_id.startswith("UC"):
             channel_id = resolve_channel_id(channel_id, API_KEY)
 
-        videos = get_recent_videos_via_playlist(channel_id, API_KEY, hours=BROADCAST_HOURS, max_results=15)
+        videos = get_recent_videos_via_playlist(
+            channel_id, API_KEY, hours=BROADCAST_HOURS, max_results=15
+        )
 
         collected = 0
         for item in videos:
@@ -268,7 +284,6 @@ def collect_youtuber():
     results = []
     channels_data = load_channels_safe()
 
-    # 1) channels.json의 top50 + youtuber 병합 (중복 제거)
     all_channels = {}
 
     for name, info in channels_data.get("top50", {}).items():
@@ -286,14 +301,15 @@ def collect_youtuber():
 
     print(f"총 수집 대상 채널: {len(all_channels)}개")
 
-    # 2) 각 채널에서 최근 영상 수집 (playlistItems = 1유닛/채널)
     for name, channel_id in all_channels.items():
         print(f"\n[유튜버] {name}")
 
         if not channel_id.startswith("UC"):
             channel_id = resolve_channel_id(channel_id, API_KEY)
 
-        videos = get_recent_videos_via_playlist(channel_id, API_KEY, hours=YOUTUBER_HOURS, max_results=10)
+        videos = get_recent_videos_via_playlist(
+            channel_id, API_KEY, hours=YOUTUBER_HOURS, max_results=10
+        )
 
         collected = 0
         for item in videos:
