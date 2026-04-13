@@ -79,7 +79,7 @@ def verify_stock_via_naver(stock_name):
             if code_match:
                 return {"name": found_name, "code": code_match.group(1)}
     except Exception as e:
-        print("  [네이버검색] " + stock_name + " 검색 실패: " + str(e))
+        print(f"  [네이버검색] {stock_name} 검색 실패: {e}")
     return None
 
 
@@ -114,7 +114,7 @@ def fetch_naver_stock_price(stock_name, code_override=None):
         if price:
             return {"price": price, "change": change or "", "change_pct": change_pct or "", "code": code}
     except Exception as e:
-        print("  [네이버] " + stock_name + "(" + code + ") 주가 조회 실패: " + str(e))
+        print(f"  [네이버] {stock_name}({code}) 주가 조회 실패: {e}")
     return None
 
 
@@ -152,7 +152,7 @@ def fetch_naver_daily_prices(code, days=14):
         results.reverse()
         return results
     except Exception as e:
-        print("  [차트] " + code + " 일별 시세 조회 실패: " + str(e))
+        print(f"  [차트] {code} 일별 시세 조회 실패: {e}")
         return []
 
 
@@ -181,7 +181,7 @@ def generate_candlestick_base64(daily_data, stock_name):
         print("  [차트] mplfinance 미설치 - 차트 생성 건너뜀")
         return None
     except Exception as e:
-        print("  [차트] " + stock_name + " 차트 생성 실패: " + str(e))
+        print(f"  [차트] {stock_name} 차트 생성 실패: {e}")
         return None
 
 
@@ -212,7 +212,7 @@ def fetch_naver_company_info(code):
                 if aname and len(aname) >= 2 and aname not in info["peers"]:
                     info["peers"].append(aname)
     except Exception as e:
-        print("  [기업정보] " + code + " 조회 실패: " + str(e))
+        print(f"  [기업정보] {code} 조회 실패: {e}")
     return info
 
 
@@ -267,7 +267,7 @@ def validate_stocks(data, api_key, all_data=None):
                 source_pool[st] = []
             source_pool[st].append(text)
         for stype, texts in source_pool.items():
-            print("  [DATA] " + stype + ": " + str(len(texts)) + "건")
+            print(f"  [DATA] {stype}: {len(texts)}건")
         for stock in data.get("stocks", []):
             name = stock.get("name", "")
             verified_reasons = []
@@ -279,7 +279,7 @@ def validate_stocks(data, api_key, all_data=None):
                     if match_source_type(reason_stype, pool_stype):
                         matched_texts.extend(pool_texts)
                 if not matched_texts:
-                    print("  [KEEP] " + name + ": " + reason_stype + " 원본 데이터 없음 -> 유지")
+                    print(f"  [KEEP] {name}: {reason_stype} 원본 데이터 없음 -> 유지")
                     verified_reasons.append(reason)
                     continue
                 found = any(name_in_text(name, t) for t in matched_texts)
@@ -288,7 +288,7 @@ def validate_stocks(data, api_key, all_data=None):
                 else:
                     removed_sources.append(reason_stype)
             if removed_sources:
-                print("  [TRIM] " + name + ": [" + ", ".join(removed_sources) + "] 원본에 근거 없음 -> 해당 소스만 제거")
+                print(f"  [TRIM] {name}: [{', '.join(removed_sources)}] 원본에 근거 없음 -> 해당 소스만 제거")
             stock["reasons"] = verified_reasons
             verified_types = list(set(r["source_type"] for r in verified_reasons))
             stock["source_types"] = verified_types
@@ -297,16 +297,22 @@ def validate_stocks(data, api_key, all_data=None):
         data["stocks"] = [s for s in data["stocks"] if len(s.get("reasons", [])) > 0]
         removed = before - len(data["stocks"])
         if removed > 0:
-            print("  [DEL] 근거 0개 종목 " + str(removed) + "개 제거")
+            print(f"  [DEL] 근거 0개 종목 {removed}개 제거")
         data["stocks"].sort(key=lambda x: x.get("overlap_count", 0), reverse=True)
         for i, stock in enumerate(data["stocks"]):
             stock["rank"] = i + 1
-        print("[검증-A] 완료: " + str(len(data["stocks"])) + "개 종목 유지")
+        print(f"[검증-A] 완료: {len(data['stocks'])}개 종목 유지")
     else:
         print("[검증-A] 원본 데이터 없음 -> 스킵")
 
     print("\n[검증-B] 네이버 금융 종목 확인 및 주가 조회...")
-    foreign_keywords = ["엔비디아", "테슬라", "애플", "마이크로소프트", "구글", "알파벳", "아마존", "메타", "넷플릭스", "AMD", "인텔", "퀄컴", "브로드컴", "NVIDIA", "Tesla", "Apple", "Microsoft", "Google", "Amazon", "Meta", "Netflix", "TSMC", "ASML", "ARM", "팔란티어", "마이크론", "코스트코", "월마트", "비자", "마스터카드"]
+    foreign_keywords = [
+        "엔비디아", "테슬라", "애플", "마이크로소프트", "구글", "알파벳",
+        "아마존", "메타", "넷플릭스", "AMD", "인텔", "퀄컴", "브로드컴",
+        "NVIDIA", "Tesla", "Apple", "Microsoft", "Google", "Amazon",
+        "Meta", "Netflix", "TSMC", "ASML", "ARM", "팔란티어", "마이크론",
+        "코스트코", "월마트", "비자", "마스터카드",
+    ]
     for stock in data.get("stocks", []):
         name = stock.get("name", "")
         is_foreign = any(kw in name for kw in foreign_keywords)
@@ -314,23 +320,23 @@ def validate_stocks(data, api_key, all_data=None):
             stock["market"] = "해외"
             stock["verified_price"] = None
             stock["chart_base64"] = None
-            print("  [OK] " + name + " - 해외 종목")
+            print(f"  [OK] {name} - 해외 종목")
             continue
         stock["market"] = "국내"
         naver_result = verify_stock_via_naver(name)
         if naver_result:
             stock["naver_code"] = naver_result["code"]
-            print("  [OK] " + name + " (" + naver_result["code"] + ")")
+            print(f"  [OK] {name} ({naver_result['code']})")
             price_info = fetch_naver_stock_price(name, code_override=naver_result["code"])
             stock["verified_price"] = price_info
             if price_info:
-                print("  [PRICE] " + name + ": " + price_info["price"] + "원 " + price_info.get("change", ""))
+                print(f"  [PRICE] {name}: {price_info['price']}원 {price_info.get('change', '')}")
                 daily = fetch_naver_daily_prices(naver_result["code"], days=14)
                 if daily:
                     chart_b64 = generate_candlestick_base64(daily, name)
                     stock["chart_base64"] = chart_b64
                     if chart_b64:
-                        print("  [CHART] " + name + " 차트 생성 완료 (" + str(len(daily)) + "일)")
+                        print(f"  [CHART] {name} 차트 생성 완료 ({len(daily)}일)")
                     else:
                         stock["chart_base64"] = None
                 else:
@@ -339,7 +345,7 @@ def validate_stocks(data, api_key, all_data=None):
                 stock["verified_price"] = None
                 stock["chart_base64"] = None
         else:
-            print("  [WARN] " + name + ": 네이버 검색 실패 -> 종목 유지, 주가 없음")
+            print(f"  [WARN] {name}: 네이버 검색 실패 -> 종목 유지, 주가 없음")
             stock["verified_price"] = None
             stock["chart_base64"] = None
 
@@ -376,15 +382,15 @@ def validate_stocks(data, api_key, all_data=None):
                     if vp:
                         code = vp.get("code", "")
                 if code:
-                    print("  [기업정보] " + name + "(" + code + ") 조회 중...")
+                    print(f"  [기업정보] {name}({code}) 조회 중...")
                     ci = fetch_naver_company_info(code)
                     if ci.get("sector"):
                         peers_str = ", ".join(ci["peers"][:5]) if ci.get("peers") else "정보없음"
                         line = "- " + name + ": 업종=" + ci["sector"] + ", 동종업종기업=[" + peers_str + "]"
                         company_info_lines.append(line)
-                        print("    -> 업종: " + ci["sector"] + ", 동종: " + peers_str)
+                        print(f"    -> 업종: {ci['sector']}, 동종: {peers_str}")
                     else:
-                        print("    -> 업종 정보 없음")
+                        print(f"    -> 업종 정보 없음")
             company_block = "\n".join(company_info_lines) if company_info_lines else "기업정보 없음"
             price_info_lines = []
             for s in data.get("stocks", []):
@@ -447,26 +453,26 @@ def validate_stocks(data, api_key, all_data=None):
                     changes = 0
                     for name in old_desc:
                         if name in new_desc and old_desc[name] != new_desc[name]:
-                            print("  [수정] " + name + ": 내용 교정됨")
+                            print(f"  [수정] {name}: 내용 교정됨")
                             changes += 1
                     data["stocks"] = corrected.get("stocks", data["stocks"])
                     data["hidden_picks"] = corrected.get("hidden_picks", data["hidden_picks"])
                     data["market_summary"] = corrected.get("market_summary", data["market_summary"])
                     data["final_summary"] = corrected.get("final_summary", data["final_summary"])
-                    print("[검증-C] 완료: " + str(changes) + "건 교정")
+                    print(f"[검증-C] 완료: {changes}건 교정")
                 else:
                     print("[검증-C] JSON 파싱 실패 -> 원본 유지")
             else:
                 print("[검증-C] API 응답 없음 -> 원본 유지")
         except Exception as e:
-            print("[검증-C] 오류: " + str(e) + " -> 원본 유지")
+            print(f"[검증-C] 오류: {e} -> 원본 유지")
     else:
         print("[검증-C] 종목 없음 -> 스킵")
 
     print("\n" + "=" * 60)
     total_stocks = len(data.get("stocks", []))
     total_hidden = len(data.get("hidden_picks", []))
-    print("[검증 완료] 최종 종목 " + str(total_stocks) + "개, 히든픽 " + str(total_hidden) + "개")
+    print(f"[검증 완료] 최종 종목 {total_stocks}개, 히든픽 {total_hidden}개")
     print("=" * 60)
     return data
 
@@ -521,6 +527,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
         "13. 각 종목의 reasons에 뉴스 출처가 있으면 반드시 포함하세요. source_type은 \"뉴스\"로, source_name은 해당 언론사명으로, source_url은 기사 URL로 기재하세요.\n"
         "14. market_summary 작성 시 뉴스 기사의 팩트(수치, 정책, 이벤트 등)를 우선적으로 활용하세요. 뉴스는 가장 신뢰도 높은 1차 소스입니다.\n"
         "15. hidden_picks의 target_price 필드에는 증권사 애널리스트 보고서의 목표가, 또는 유튜브/경제방송에서 언급된 매수·매도·적정 가격을 출처와 함께 기재하세요. 확인되지 않으면 빈 문자열로 두세요.\n\n"
+        "JSON만 출력하고 다른 텍스트는 포함하지 마세요.\n\n"
         + CB + "json\n"
         "{\n"
         '  "briefing_date": "' + today_date + '",\n'
@@ -573,9 +580,9 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
                 data = json.loads(json_match.group())
                 stock_count = len(data.get("stocks", []))
                 hidden_count = len(data.get("hidden_picks", []))
-                print("[1차 분석] 파싱 성공: 종목 " + str(stock_count) + "개, 히든픽 " + str(hidden_count) + "개")
+                print(f"[1차 분석] 파싱 성공: 종목 {stock_count}개, 히든픽 {hidden_count}개")
             except json.JSONDecodeError as e:
-                print("[1차 분석] JSON 파싱 실패: " + str(e))
+                print(f"[1차 분석] JSON 파싱 실패: {e}")
 
     if not data:
         print("[1차 분석] 폴백 데이터 사용")
@@ -616,6 +623,12 @@ def generate_html(data, channels_data=None, gh_repo=""):
     hidden_picks = data.get("hidden_picks", [])
     final_summary = data.get("final_summary", "")
 
+    # ★ 변경3: 2개 이상 채널에서 언급된 종목만 표출
+    stocks = [s for s in stocks if s.get("overlap_count", 0) >= 2]
+
+    # ★ 변경4: 히든픽은 긍정 판단 종목만
+    hidden_picks = [s for s in hidden_picks if s.get("signal", "") == "긍정"]
+
     summary_paragraphs = market_summary.split("\n\n")
     formatted_summary = ""
     for para in summary_paragraphs:
@@ -649,16 +662,19 @@ def generate_html(data, channels_data=None, gh_repo=""):
         verified_price = stock.get("verified_price")
         chart_b64 = stock.get("chart_base64")
         market = stock.get("market", "국내")
+
         if signal == "긍정":
             signal_class = "signal-positive"
         elif signal == "부정":
             signal_class = "signal-negative"
         else:
             signal_class = "signal-neutral"
+
         overlap_badge = '<span class="overlap-badge">' + str(overlap) + '개 채널 언급</span>'
         source_tags = ""
         for st in source_types:
             source_tags += '<span class="source-tag">' + st + '</span>'
+
         price_html = ""
         if verified_price:
             p = verified_price
@@ -669,9 +685,11 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + '</div>')
         elif market == "해외":
             price_html = '<div class="price-box"><span class="price-note">해외 종목 (실시간 가격 미제공)</span></div>'
+
         chart_icon_html = ""
         if chart_b64:
             chart_icon_html = ' <span class="chart-icon" onclick="openChartWindow(\'' + name + '\', \'x\')" data-chart="' + str(rank) + '" title="14일 주가 차트 보기">&#x1F4C8; 주가차트</span>'
+
         reasons_html = ""
         for reason in reasons:
             rs = reason.get("source_type", "")
@@ -687,6 +705,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + '</div>'
                 + '<p class="reason-detail">' + rd + '</p>'
                 + '</div>')
+
         stocks_html += ('<div class="stock-card">'
             + '<div class="stock-header">'
             + '<span class="stock-rank">#' + str(rank) + '</span>'
@@ -694,49 +713,42 @@ def generate_html(data, channels_data=None, gh_repo=""):
             + '<span class="stock-signal ' + signal_class + '">' + signal + '</span>'
             + overlap_badge
             + '</div>'
-            + '<div class="stock-sources">' + source_tags + '</div>'
             + price_html
-            + '<div class="stock-info-grid">'
-            + '<div class="info-block"><div class="info-label">&#x1F4CB; 종목요약</div><div class="info-text">' + description + '</div></div>'
-            + '<div class="info-block"><div class="info-label">&#x1F4C8; 주가흐름</div><div class="info-text">' + price_trend + chart_icon_html + '</div></div>'
-            + '<div class="info-block"><div class="info-label">&#x1F680; 상승촉매</div><div class="info-text">' + catalyst + '</div></div>'
-            + '<div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">' + risk + '</div></div>'
-            + '</div>'
-            + '<div class="stock-reasons">'
-            + '<div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>'
-            + reasons_html
-            + '</div>'
-            + '</div>')
+            + chart_icon_html
+            + '<div class="source-tags">' + source_tags + '</div>'
+            + '<div class="info-block"><h4>&#x1F4CB; 종목 요약</h4><p>' + description + '</p></div>'
+            + '<div class="info-block"><h4>&#x1F4C8; 주가 흐름</h4><p>' + price_trend + '</p></div>'
+            + '<div class="info-block"><h4>&#x1F680; 상승 촉매</h4><p>' + catalyst + '</p></div>'
+            + '<div class="info-block"><h4>&#x26A0;&#xFE0F; 리스크</h4><p>' + risk + '</p></div>'
+            + '<div class="reasons-section"><h4>&#x1F4E2; 채널별 언급 내용</h4>' + reasons_html + '</div>'
+            + '</div>\n')
 
+    # ── 히든픽 카드 HTML ──
     hidden_html = ""
-    for stock in hidden_picks:
-        name = stock.get("name", "")
-        rank = stock.get("rank", "")
-        signal = stock.get("signal", "중립")
-        description = stock.get("description", "")
-        catalyst = stock.get("catalyst", "")
-        risk = stock.get("risk", "")
-        reasons = stock.get("reasons", [])
-        verified_price = stock.get("verified_price")
-        market = stock.get("market", "국내")
-        if signal == "긍정":
-            signal_class = "signal-positive"
-        elif signal == "부정":
-            signal_class = "signal-negative"
-        else:
-            signal_class = "signal-neutral"
-        price_html = ""
-        if verified_price:
-            p = verified_price
+    for hp in hidden_picks:
+        hp_name = hp.get("name", "")
+        hp_rank = hp.get("rank", "")
+        hp_desc = hp.get("description", "")
+        hp_catalyst = hp.get("catalyst", "")
+        hp_risk = hp.get("risk", "")
+        hp_target = hp.get("target_price", "")
+        hp_reasons = hp.get("reasons", [])
+        hp_verified = hp.get("verified_price")
+        hp_market = hp.get("market", "국내")
+
+        hp_price_html = ""
+        if hp_verified:
+            p = hp_verified
             change_class = "price-up" if p.get("change", "").startswith("+") else "price-down"
-            price_html = ('<div class="price-box">'
+            hp_price_html = ('<div class="price-box">'
                 + '<span class="current-price">' + p['price'] + '&#xC6D0;</span>'
                 + '<span class="' + change_class + '">' + p.get('change', '') + ' (' + p.get('change_pct', '') + ')</span>'
                 + '</div>')
-        elif market == "해외":
-            price_html = '<div class="price-box"><span class="price-note">해외 종목</span></div>'
-        reasons_html = ""
-        for reason in reasons:
+        elif hp_market == "해외":
+            hp_price_html = '<div class="price-box"><span class="price-note">해외 종목 (실시간 가격 미제공)</span></div>'
+
+        hp_reasons_html = ""
+        for reason in hp_reasons:
             rs = reason.get("source_type", "")
             rn = reason.get("source_name", "")
             rd = reason.get("detail", "")
@@ -744,199 +756,196 @@ def generate_html(data, channels_data=None, gh_repo=""):
             link_html = ""
             if rurl:
                 link_html = ' <a href="' + rurl + '" target="_blank" class="source-link" title="원본 보기">&#x1F517; 바로보기</a>'
-            reasons_html += ('<div class="reason-item">'
+            hp_reasons_html += ('<div class="reason-item">'
                 + '<div class="reason-header">'
                 + '<span class="reason-source">[' + rs + '] ' + rn + '</span>' + link_html
                 + '</div>'
                 + '<p class="reason-detail">' + rd + '</p>'
                 + '</div>')
-        hidden_html += ('<div class="stock-card hidden-card">'
+
+        # ★ 변경4: target_price 블록 (info-block들 사이, catalyst와 risk 사이에 삽입)
+        target_price_html = ""
+        if hp_target:
+            target_price_html = '<div class="info-block"><h4>&#x1F4B0; 매수·매도 적정가격</h4><p>' + hp_target + '</p></div>'
+
+        # ★ 변경4: signal 배지 제거 (히든픽 카드에서 긍정/중립/부정 표시 삭제)
+        hidden_html += ('<div class="hidden-pick-card">'
             + '<div class="stock-header">'
-            + '<span class="stock-rank hidden-rank">H' + str(rank) + '</span>'
-            + '<span class="stock-name">&#x1F48E; ' + name + '</span>'
-            + '<span class="stock-signal ' + signal_class + '">' + signal + '</span>'
+            + '<span class="stock-rank">Hidden #' + str(hp_rank) + '</span>'
+            + '<span class="stock-name">' + hp_name + '</span>'
             + '</div>'
-            + price_html
-            + '<div class="stock-info-grid">'
-            + '<div class="info-block"><div class="info-label">&#x1F3E2; 기업 소개</div><div class="info-text">' + description + '</div></div>'
-            + '<div class="info-block"><div class="info-label">&#x1F680; 주목 이유</div><div class="info-text">' + catalyst + '</div></div>'
-            + '<div class="info-block"><div class="info-label">&#x26A0;&#xFE0F; 리스크</div><div class="info-text">' + risk + '</div></div>'
-            + '</div>'
-            + '<div class="stock-reasons">'
-            + '<div class="reasons-title">&#x1F4AC; 채널별 분석 근거</div>'
-            + reasons_html
-            + '</div>'
-            + '</div>')
+            + hp_price_html
+            + '<div class="info-block"><h4>&#x1F4CB; 기업 소개</h4><p>' + hp_desc + '</p></div>'
+            + '<div class="info-block"><h4>&#x1F680; 주목 이유</h4><p>' + hp_catalyst + '</p></div>'
+            + target_price_html
+            + '<div class="info-block"><h4>&#x26A0;&#xFE0F; 리스크</h4><p>' + hp_risk + '</p></div>'
+            + '<div class="reasons-section"><h4>&#x1F4E2; 채널별 언급 내용</h4>' + hp_reasons_html + '</div>'
+            + '</div>\n')
 
-    settings_html = ""
-    if channels_data is not None:
-        escaped_pw = PANEL_PASSWORD.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"')
-        settings_html = ('<div id="settings-panel" style="display:none; padding:20px; background:#1a1a2e; border-radius:12px; margin-top:20px;">'
-            + '<h3 style="color:#e0e0e0;">&#x2699;&#xFE0F; 채널 설정</h3>'
-            + '<p style="color:#888;">이 패널에서 데이터 수집 채널을 관리할 수 있습니다.</p>'
-            + '<p style="color:#666; font-size:0.85rem;">GitHub: ' + (gh_repo or "미설정") + '</p>'
-            + '</div>'
-            + '<script>'
-            + 'function openSettings() {'
-            + 'var pw = prompt("비밀번호를 입력하세요:");'
-            + 'if (pw === "' + escaped_pw + '") {'
-            + 'document.getElementById("settings-panel").style.display = "block";'
-            + '} else if (pw !== null) {'
-            + 'alert("비밀번호가 틀렸습니다.");'
-            + '}}'
-            + '</script>')
-
-    chart_data_js = "var chartData = {};\n"
+    # ── 차트 데이터 (JavaScript) ──
+    chart_data_js = "var chartDataMap = {};\n"
     for stock in stocks:
-        r = stock.get("rank", "")
-        b64 = stock.get("chart_base64", "")
+        b64 = stock.get("chart_base64")
         if b64:
-            chart_data_js += 'chartData["' + str(r) + '"] = "' + b64 + '";\n'
+            chart_data_js += 'chartDataMap["' + str(stock.get("rank","")) + '"] = "data:image/png;base64,' + b64 + '";\n'
 
-    # ── 아카이브 링크 생성 ──
-    archive_dir = os.path.join("docs", "archive")
-    os.makedirs(archive_dir, exist_ok=True)
-    archive_links_html = ""
-    existing_dates = []
-    if os.path.isdir(archive_dir):
-        for fname in os.listdir(archive_dir):
-            if fname.endswith(".html") and len(fname) == 15:
-                d = fname.replace(".html", "")
-                existing_dates.append(d)
-    existing_dates.append(briefing_date)
-    existing_dates = sorted(set(existing_dates), reverse=True)[:7]
-    for d in existing_dates:
-        if d == briefing_date:
-            archive_links_html += '<span class="archive-link archive-today">' + d + ' (오늘)</span>\n'
-        else:
-            archive_links_html += '<a href="archive/' + d + '.html" class="archive-link">' + d + '</a>\n'
+    # ── 아카이브 목록 ──
+    archive_links = ""
+    if gh_repo:
+        try:
+            data_dir = "data"
+            if os.path.isdir(data_dir):
+                json_files = sorted([f for f in os.listdir(data_dir) if f.startswith("raw_") and f.endswith(".json")], reverse=True)
+                for jf in json_files[:14]:
+                    date_str = jf.replace("raw_", "").replace(".json", "")
+                    archive_links += '<a href="https://' + gh_repo.split("/")[0] + '.github.io/' + gh_repo.split("/")[1] + '/archive_' + date_str + '.html" class="archive-link">' + date_str + '</a>\n'
+        except Exception:
+            pass
 
-    css_block = """* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a14; color:#e0e0e0; font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.7; padding:20px; max-width:900px; margin:0 auto; }
-.header { text-align:center; padding:30px 0 20px; border-bottom:1px solid #2a2a3e; margin-bottom:30px; }
-.header h1 { font-size:1.8rem; color:#ffffff; margin-bottom:6px; }
-.header .subtitle { color:#6c5ce7; font-size:0.95rem; margin-bottom:4px; }
-.header .date { color:#888; font-size:0.85rem; }
-.section { margin-bottom:35px; }
-.section-title { font-size:1.3rem; color:#ffffff; margin-bottom:15px; padding-left:12px; border-left:3px solid #6c5ce7; }
-.market-summary { background:#141420; border-radius:12px; padding:22px; }
-.summary-block { margin-bottom:18px; }
-.summary-block:last-child { margin-bottom:0; }
-.summary-subtitle { color:#6c5ce7; font-size:1.05rem; margin-bottom:6px; }
-.summary-text { color:#ccc; font-size:0.95rem; line-height:1.9; }
-.sector-badge { display:inline-block; background:#6c5ce7; color:#fff; padding:5px 14px; border-radius:20px; margin:4px; font-size:0.9rem; }
-.stock-card { background:#141420; border-radius:12px; padding:22px; margin-bottom:20px; border:1px solid #2a2a3e; transition:border-color 0.2s; }
-.stock-card:hover { border-color:#6c5ce7; }
-.hidden-card { border-color:#f39c12; }
-.hidden-card:hover { border-color:#e67e22; }
-.stock-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-.stock-rank { background:#6c5ce7; color:#fff; padding:3px 10px; border-radius:8px; font-weight:bold; font-size:0.9rem; }
-.hidden-rank { background:#f39c12; }
-.stock-name { font-size:1.2rem; font-weight:bold; color:#ffffff; }
-.stock-signal { padding:3px 12px; border-radius:8px; font-size:0.85rem; font-weight:bold; }
-.signal-positive { background:#ff6b6b33; color:#ff6b6b; }
-.signal-negative { background:#339af033; color:#339af0; }
-.signal-neutral { background:#ffd93d33; color:#ffd93d; }
-.overlap-badge { background:#00b89433; color:#00b894; padding:3px 10px; border-radius:8px; font-size:0.8rem; }
-.stock-sources { margin-bottom:10px; }
-.source-tag { display:inline-block; background:#2a2a3e; color:#aaa; padding:2px 8px; border-radius:4px; margin:2px; font-size:0.8rem; }
-.price-box { background:#1e1e2e; border-radius:8px; padding:10px 15px; margin:10px 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-.current-price { font-size:1.1rem; font-weight:bold; color:#fff; }
-.price-up { color:#ff6b6b; font-weight:bold; }
-.price-down { color:#339af0; font-weight:bold; }
-.price-note { color:#888; font-size:0.9rem; }
-.stock-info-grid { display:flex; flex-direction:column; gap:14px; margin:15px 0; }
-.info-block { background:#1a1a2e; border-radius:8px; padding:14px 16px; }
-.info-label { color:#6c5ce7; font-size:0.9rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-.info-text { color:#ccc; font-size:0.9rem; line-height:1.8; }
-.chart-icon { cursor:pointer; font-size:0.85rem; background:#2a2a3e; color:#aaa; padding:3px 10px; border-radius:6px; margin-left:8px; transition:all 0.2s; display:inline-block; }
-.chart-icon:hover { background:#6c5ce7; color:#fff; }
-.stock-reasons { border-top:1px solid #2a2a3e; padding-top:14px; margin-top:14px; }
-.reasons-title { color:#888; font-size:0.85rem; font-weight:bold; margin-bottom:10px; }
-.reason-item { background:#1a1a2e; border-radius:8px; padding:12px 14px; margin-bottom:8px; }
-.reason-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.reason-source { color:#6c5ce7; font-size:0.85rem; font-weight:bold; }
-.source-link { color:#00b894; font-size:0.8rem; text-decoration:none; background:#00b89415; padding:2px 8px; border-radius:4px; transition:all 0.2s; }
-.source-link:hover { background:#00b89433; color:#fff; }
-.reason-detail { color:#bbb; font-size:0.88rem; line-height:1.7; margin-top:4px; }
-.final-summary { background:#141420; border-radius:12px; padding:22px; color:#ccc; line-height:1.9; font-size:0.95rem; white-space:pre-line; }
-.disclaimer { text-align:center; color:#666; font-size:0.8rem; margin-top:40px; padding:20px; border-top:1px solid #2a2a3e; }
-.settings-btn { position:fixed; bottom:20px; right:20px; background:#2a2a3e; color:#888; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.8rem; z-index:100; }
-.settings-btn:hover { background:#3a3a4e; color:#fff; }
-.archive-section { background:#141420; border-radius:12px; padding:22px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
-.archive-link { display:inline-block; background:#2a2a3e; color:#aaa; padding:8px 16px; border-radius:8px; text-decoration:none; font-size:0.9rem; transition:all 0.2s; }
-.archive-link:hover { background:#6c5ce7; color:#fff; }
-.archive-today { background:#6c5ce7; color:#fff; font-weight:bold; }
-@media (max-width:600px) {
-    body { padding:12px; }
-    .header h1 { font-size:1.4rem; }
-    .stock-name { font-size:1rem; }
-    .stock-header { gap:6px; }
-}"""
+    # ── 최종 HTML 조립 ──
+    html = '''<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 주식 브리핑 - ''' + briefing_date + '''</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a14; color: #e0e0e0; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; padding: 20px; }
+.header { text-align: center; padding: 30px 0; border-bottom: 1px solid #1e1e2e; margin-bottom: 30px; }
+.header h1 { font-size: 1.8em; color: #fff; margin-bottom: 8px; }
+.header .date { color: #888; font-size: 0.95em; }
+.header .desc { color: #aaa; font-size: 0.85em; margin-top: 8px; }
+.section { margin-bottom: 35px; }
+.section-title { font-size: 1.3em; color: #fff; margin-bottom: 15px; padding-left: 12px; border-left: 3px solid #667eea; }
+.summary-block { background: #141420; border-radius: 12px; padding: 18px; margin-bottom: 12px; border: 1px solid #1e1e2e; }
+.summary-subtitle { color: #667eea; font-size: 1.05em; margin-bottom: 8px; }
+.summary-text { color: #ccc; font-size: 0.92em; }
+.sector-badge { display: inline-block; background: linear-gradient(135deg, #667eea20, #764ba220); color: #a8b4ff; padding: 6px 14px; border-radius: 20px; margin: 4px; font-size: 0.85em; border: 1px solid #667eea40; }
+.stock-card, .hidden-pick-card { background: #141420; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #1e1e2e; transition: border-color 0.3s; }
+.stock-card:hover, .hidden-pick-card:hover { border-color: #667eea60; }
+.stock-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.stock-rank { background: #667eea; color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 700; }
+.stock-name { font-size: 1.15em; font-weight: 700; color: #fff; }
+.stock-signal { padding: 3px 10px; border-radius: 10px; font-size: 0.8em; font-weight: 600; }
+.signal-positive { background: #ff6b6b20; color: #ff6b6b; border: 1px solid #ff6b6b40; }
+.signal-negative { background: #339af020; color: #339af0; border: 1px solid #339af040; }
+.signal-neutral { background: #ffd43b20; color: #ffd43b; border: 1px solid #ffd43b40; }
+.overlap-badge { background: #51cf6620; color: #51cf66; padding: 3px 10px; border-radius: 10px; font-size: 0.8em; border: 1px solid #51cf6640; }
+.source-tags { margin-bottom: 12px; }
+.source-tag { display: inline-block; background: #1e1e2e; color: #888; padding: 3px 8px; border-radius: 6px; font-size: 0.75em; margin: 2px; }
+.price-box { margin-bottom: 12px; padding: 10px; background: #1a1a2e; border-radius: 8px; }
+.current-price { font-size: 1.3em; font-weight: 700; color: #fff; margin-right: 10px; }
+.price-up { color: #ff6b6b; font-weight: 600; }
+.price-down { color: #339af0; font-weight: 600; }
+.price-note { color: #888; font-size: 0.85em; }
+.chart-icon { cursor: pointer; color: #667eea; font-size: 0.9em; padding: 4px 8px; border-radius: 6px; background: #667eea15; border: 1px solid #667eea30; }
+.chart-icon:hover { background: #667eea30; }
+.info-block { margin-bottom: 12px; }
+.info-block h4 { color: #a8b4ff; font-size: 0.9em; margin-bottom: 4px; }
+.info-block p { color: #bbb; font-size: 0.88em; }
+.reasons-section { margin-top: 12px; }
+.reasons-section h4 { color: #a8b4ff; font-size: 0.9em; margin-bottom: 8px; }
+.reason-item { background: #1a1a2e; border-radius: 8px; padding: 10px; margin-bottom: 6px; }
+.reason-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.reason-source { color: #667eea; font-size: 0.82em; font-weight: 600; }
+.source-link { color: #51cf66; font-size: 0.78em; text-decoration: none; }
+.source-link:hover { text-decoration: underline; }
+.reason-detail { color: #aaa; font-size: 0.85em; }
+.final-summary { background: linear-gradient(135deg, #141420, #1a1a2e); border: 1px solid #667eea30; border-radius: 12px; padding: 20px; }
+.final-summary p { color: #ccc; font-size: 0.92em; }
+.disclaimer { text-align: center; color: #666; font-size: 0.78em; margin-top: 30px; padding: 15px; border-top: 1px solid #1e1e2e; }
+.archive-section { margin-top: 20px; }
+.archive-link { display: inline-block; color: #667eea; text-decoration: none; padding: 4px 10px; margin: 3px; border: 1px solid #667eea30; border-radius: 6px; font-size: 0.82em; }
+.archive-link:hover { background: #667eea20; }
+.hidden-pick-card { border-left: 3px solid #ffd43b; }
+.chart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
+.chart-modal img { max-width: 95%; max-height: 80%; border-radius: 8px; }
+.chart-modal .close-btn { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 2em; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>&#x1F4CA; AI 주식 브리핑</h1>
+        <div class="date">''' + briefing_date + ' 기준</div>' + '''
+        <div class="desc">최근 뉴스와 경제방송, 구독자 상위권 유튜브, 증권사 보고서에서 공통으로 언급된 종목들에 대한 브리핑입니다.</div>
+    </div>
 
-    chart_js = ("function openChartWindow(stockName, prefix) {"
-        + "var rankEl = event.target.closest('[data-chart]');"
-        + "var rank = rankEl ? rankEl.getAttribute('data-chart') : '';"
-        + "var b64 = chartData[rank];"
-        + "if (!b64) { alert(stockName + ' 차트 데이터가 없습니다.'); return; }"
-        + "var win = window.open('', '_blank', 'width=700,height=500,scrollbars=yes');"
-        + "win.document.write('<html><head><title>' + stockName + ' - 14일 주가 차트</title>');"
-        + "win.document.write('<style>body{background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}');"
-        + "win.document.write('h2{color:#fff;font-family:sans-serif;margin-bottom:15px;}');"
-        + "win.document.write('img{max-width:100%;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5);}</style></head><body>');"
-        + "win.document.write('<h2>' + stockName + ' - 14일 주가 차트</h2>');"
-        + "win.document.write('<img src=\"data:image/png;base64,' + b64 + '\" />');"
-        + "win.document.write('</body></html>');"
-        + "win.document.close(); }")
+    <div class="section">
+        <h2 class="section-title">&#x1F30D; 시장 요약</h2>
+        ''' + formatted_summary + '''
+    </div>
 
-    no_stocks_msg = '<div class="stock-card"><p style="color:#888; text-align:center;">분석된 추천 종목이 없습니다.</p></div>'
-    no_hidden_msg = '<div class="stock-card hidden-card"><p style="color:#888; text-align:center;">분석된 히든픽이 없습니다.</p></div>'
-    no_sectors_msg = '<span style="color:#888;">분석된 섹터가 없습니다.</span>'
+    <div class="section">
+        <h2 class="section-title">&#x1F525; 주목 섹터</h2>
+        ''' + sectors_html + '''
+    </div>
 
-    full_html = ('<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-        + '<title>주식 투자 AI 브리핑 - ' + briefing_date + '</title>\n'
-        + '<style>\n' + css_block + '\n</style>\n</head>\n<body>\n\n'
-        + '<div class="header">\n<h1>&#x1F4CA; 주식 투자 AI 브리핑</h1>\n'
-        + '<div class="subtitle">최근 뉴스와 경제방송, 구독자 상위권 유튜브, 증권사 보고서에서 공통으로 언급된 종목들에 대한 브리핑입니다.</div>\n'
-        + '<div class="date">' + briefing_date + ' | AI 자동 분석 리포트</div>\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F30F; 시장 종합 요약</h2>\n'
-        + '<div class="market-summary">' + formatted_summary + '</div>\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F525; 주목 섹터</h2>\n'
-        + '<div>' + (sectors_html if sectors_html else no_sectors_msg) + '</div>\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F3AF; 추천 종목</h2>\n'
-        + (stocks_html if stocks_html else no_stocks_msg) + '\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F48E; 히든픽</h2>\n'
-        + (hidden_html if hidden_html else no_hidden_msg) + '\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F4DD; AI 최종 요약</h2>\n'
-        + '<div class="final-summary">' + final_summary + '</div>\n</div>\n\n'
-        + '<div class="section">\n<h2 class="section-title">&#x1F4C5; 지난 브리핑</h2>\n'
-        + '<div class="archive-section">' + archive_links_html + '</div>\n</div>\n\n'
-        + '<div class="disclaimer">\n본 브리핑은 AI가 공개 데이터를 분석한 것으로 투자 권유가 아닙니다.<br>\n'
-        + '투자 판단의 책임은 투자자 본인에게 있습니다.\n</div>\n\n'
-        + '<button class="settings-btn" onclick="openSettings()">&#x2699;&#xFE0F; 설정</button>\n\n'
-        + settings_html + '\n\n'
-        + '<script>\n' + chart_data_js + '\n' + chart_js + '\n</script>\n\n'
-        + '</body>\n</html>')
+    <div class="section">
+        <h2 class="section-title">&#x1F3AF; 관심 종목</h2>
+        ''' + stocks_html + '''
+    </div>
+'''
 
-    os.makedirs("docs", exist_ok=True)
-    with open("docs/index.html", "w", encoding="utf-8") as f:
-        f.write(full_html)
-    print("[HTML] docs/index.html 저장 완료 (" + str(len(full_html)) + "자)")
+    if hidden_html:
+        html += '''
+    <div class="section">
+        <h2 class="section-title">&#x1F48E; 히든픽</h2>
+        ''' + hidden_html + '''
+    </div>
+'''
 
-    # ── 아카이브 사본 저장 ──
-    archive_path = os.path.join("docs", "archive", briefing_date + ".html")
-    with open(archive_path, "w", encoding="utf-8") as f:
-        f.write(full_html)
-    print("[아카이브] " + archive_path + " 저장 완료")
+    html += '''
+    <div class="section">
+        <h2 class="section-title">&#x1F4DD; AI 최종 요약</h2>
+        <div class="final-summary">
+            <p>''' + final_summary + '''</p>
+        </div>
+    </div>
+'''
 
-    # ── 7일 초과 아카이브 정리 ──
-    try:
-        all_archives = sorted([fn for fn in os.listdir(archive_dir) if fn.endswith(".html")], reverse=True)
-        for old_file in all_archives[7:]:
-            old_path = os.path.join(archive_dir, old_file)
-            os.remove(old_path)
-            print("[아카이브] 오래된 파일 삭제: " + old_file)
-    except Exception as e:
-        print("[아카이브] 정리 중 오류: " + str(e))
+    if archive_links:
+        html += '''
+    <div class="section archive-section">
+        <h2 class="section-title">&#x1F4C5; 지난 브리핑</h2>
+        ''' + archive_links + '''
+    </div>
+'''
 
-    return full_html
+    html += '''
+    <div class="disclaimer">
+        ⚠️ 본 브리핑은 AI가 자동 생성한 참고 자료이며, 투자 권유가 아닙니다.<br>
+        투자 판단의 책임은 투자자 본인에게 있습니다.
+    </div>
+</div>
+
+<div class="chart-modal" id="chartModal" onclick="closeChart()">
+    <span class="close-btn" onclick="closeChart()">&times;</span>
+    <img id="chartImg" src="" alt="차트">
+</div>
+
+<script>
+''' + chart_data_js + '''
+function openChartWindow(stockName, x) {
+    var el = event.target.closest('[data-chart]');
+    if (!el) return;
+    var key = el.getAttribute('data-chart');
+    var src = chartDataMap[key];
+    if (src) {
+        document.getElementById('chartImg').src = src;
+        document.getElementById('chartModal').style.display = 'flex';
+    }
+}
+function closeChart() {
+    document.getElementById('chartModal').style.display = 'none';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeChart();
+});
+</script>
+</body>
+</html>'''
+
+    return html
