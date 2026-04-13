@@ -114,7 +114,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             stock["source_types"] = verified_types
             stock["overlap_count"] = len(verified_types)
 
-            # ✅ 검증-A 후 channel_counts / total_count를 실제 남은 reasons 기준으로 재계산
             new_counts = {"뉴스": 0, "경제방송": 0, "유튜브": 0, "애널리스트": 0}
             for r in verified_reasons:
                 st = r.get("source_type", "")
@@ -328,7 +327,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     for orig in data.get("stocks", []):
                         for corr in corrected.get("stocks", []):
                             if corr.get("name") == orig.get("name"):
-                                # ✅ 검증-A에서 재계산한 수치 필드 전부 원본으로 강제 복원
                                 for key in [
                                     "verified_price", "market", "naver_code",
                                     "chart_base64", "source_types",
@@ -363,10 +361,13 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
 
                     data["stocks"] = corrected.get("stocks", data["stocks"])
                     data["hidden_picks"] = corrected.get("hidden_picks", data["hidden_picks"])
-                    data["market_summary"] = corrected.get("market_summary", data["market_summary"])
-                    data["investment_strategy"] = corrected.get(
-                        "investment_strategy", data.get("investment_strategy", "")
-                    )
+
+                    # ✅ 수정: 빈 값이 아닐 때만 덮어쓰기 (원본 유실 방지)
+                    if corrected.get("market_summary"):
+                        data["market_summary"] = corrected["market_summary"]
+                    if corrected.get("investment_strategy"):
+                        data["investment_strategy"] = corrected["investment_strategy"]
+
                     print("[검증-C] 완료")
                 else:
                     print("[검증-C] JSON 파싱 실패 -> 원본 유지")
