@@ -257,6 +257,7 @@ def validate_stocks(data, api_key, all_data=None):
                 return True
         return False
 
+    # ── 검증-A: 각 소스별 원본 데이터 재확인 ──
     if all_data:
         print("\n[검증-A] 각 소스별 원본 데이터 재확인...")
         source_pool = {}
@@ -305,6 +306,7 @@ def validate_stocks(data, api_key, all_data=None):
     else:
         print("[검증-A] 원본 데이터 없음 -> 스킵")
 
+    # ── 검증-B: 네이버 금융 종목 확인 + 주가 + 차트 ──
     print("\n[검증-B] 네이버 금융 종목 확인 및 주가 조회...")
     foreign_keywords = [
         "엔비디아", "테슬라", "애플", "마이크로소프트", "구글", "알파벳",
@@ -368,6 +370,144 @@ def validate_stocks(data, api_key, all_data=None):
             stock["verified_price"] = None
             stock["chart_base64"] = None
 
+    # ── 검증-D: "특정 종목" 등 모호 표현 -> 실제 종목명 치환 ──
+    print("\n[검증-D] 모호 표현('특정 종목' 등) 검출 및 치환...")
+    vague_patterns = ["특정 종목", "특정 주식", "특정 기업", "한 종목", "일부 종목", "특정주", "특정 회사", "해당 종목", "해당 주식"]
+
+    def find_vague(text):
+        for vp in vague_patterns:
+            if vp in text:
+                return True
+        return False
+
+    def extract_source_texts(all_src_data, source_name="", source_type=""):
+        texts = []
+        for item in (all_src_data or []):
+            match_sn = True
+            match_st = True
+            if source_name:
+                item_sn = item.get("source_name", "").lower()
+                if source_name.lower() not in item_sn and item_sn not in source_name.lower():
+                    match_sn = False
+            if source_type:
+                item_st = item.get("source_type", "").lower()
+                matched_any = False
+                for key, aliases in type_aliases.items():
+                    if any(al in source_type.lower() for al in aliases) and any(al in item_st for al in aliases):
+                        matched_any = True
+                        break
+                if not matched_any:
+                    if source_type.lower() not in item_st and item_st not in source_type.lower():
+                        match_st = False
+            if match_sn and match_st:
+                full_text = " ".join([
+                    item.get("title", ""),
+                    item.get("summary", ""),
+                    item.get("content", ""),
+                ])
+                texts.append(full_text)
+        return " ".join(texts)
+
+    def try_resolve_vague(text, context_stock_name, all_src_data, reason=None):
+        if not find_vague(text):
+            return text, False
+        source_name = reason.get("source_name", "") if reason else ""
+        source_type = reason.get("source_type", "") if reason else ""
+        raw_text = extract_source_texts(all_src_data, source_name, source_type)
+        if not raw_text:
+            raw_text = extract_source_texts(all_src_data, "", source_type)
+        if not raw_text:
+            return text, False
+        stock_candidates = []
+        quoted = re.findall(r"['\"\u2018\u2019\u201C\u201D]([가-힣A-Za-z0-9]{2,12})['\"\u2018\u2019\u201C\u201D]", raw_text)
+        stock_candidates.extend(quoted)
+        korean_names = re.findall(r'([가-힣]{2,8})(?:을|를|의|이|가|은|는|도|와|과|에|로|주|부터|까지|보다)', raw_text)
+        stock_candidates.extend(korean_names)
+        skip_words = {
+            "시장", "투자", "매수", "매도", "상승", "하락", "분석", "전망", "오늘",
+            "내일", "이번", "다음", "최근", "올해", "내년", "지금", "종목", "주식",
+            "기업", "회사", "업종", "섹터", "테마", "원전", "반도체", "방산",
+            "바이오", "배터리", "수소", "로봇", "긴급", "속보", "단독", "추천",
+            "공개", "비밀", "무료", "확인", "가능", "전문", "대표", "관련",
+            "수익", "실적", "성장", "하반기", "상반기", "대비", "이상", "이하",
+            "목표", "예상", "전략", "포트", "리스크", "기대", "우려", "가격",
+            "거래", "물량", "수급", "외국인", "기관", "개인", "코스피", "코스닥",
+        }
+        seen = set()
+        verified_names = []
+        for cand in stock_candidates:
+            cand = cand.strip()
+            if cand in seen or cand == context_stock_name:
+                continue
+            if len(cand) < 2 or cand in skip_words:
+                continue
+            seen.add(cand)
+            if len(verified_names) >= 5:
+                break
+            nv = verify_stock_via_naver(cand)
+            if nv:
+                verified_names.append(nv["name"])
+        if verified_names:
+            replacement = ", ".join(verified_names[:3])
+            changed = False
+            for vp in vague_patterns:
+                if vp in text:
+                    text = text.replace(vp, replacement)
+                    print(f"  [치환] '{vp}' -> '{replacement}'")
+                    changed = True
+            return text, changed
+        return text, False
+
+    vague_fix_count = 0
+    for stock in data.get("stocks", []):
+        sname = stock.get("name", "")
+        for reason in stock.get("reasons", []):
+            detail = reason.get("detail", "")
+            new_detail, fixed = try_resolve_vague(detail, sname, all_data, reason)
+            if fixed:
+                reason["detail"] = new_detail
+                vague_fix_count += 1
+        for field in ["description", "catalyst", "risk", "price_trend"]:
+            val = stock.get(field, "")
+            if val:
+                new_val, fixed = try_resolve_vague(val, sname, all_data)
+                if fixed:
+                    stock[field] = new_val
+                    vague_fix_count += 1
+
+    for hp in data.get("hidden_picks", []):
+        sname = hp.get("name", "")
+        for reason in hp.get("reasons", []):
+            detail = reason.get("detail", "")
+            new_detail, fixed = try_resolve_vague(detail, sname, all_data, reason)
+            if fixed:
+                reason["detail"] = new_detail
+                vague_fix_count += 1
+        for field in ["description", "catalyst", "risk", "target_price"]:
+            val = hp.get(field, "")
+            if val:
+                new_val, fixed = try_resolve_vague(val, sname, all_data)
+                if fixed:
+                    hp[field] = new_val
+                    vague_fix_count += 1
+
+    ms = data.get("market_summary", "")
+    if ms:
+        new_ms, fixed = try_resolve_vague(ms, "", all_data)
+        if fixed:
+            data["market_summary"] = new_ms
+            vague_fix_count += 1
+
+    fs = data.get("final_summary", "")
+    if fs:
+        new_fs, fixed = try_resolve_vague(fs, "", all_data)
+        if fixed:
+            data["final_summary"] = new_fs
+            vague_fix_count += 1
+
+    print(f"[검증-D] 완료: {vague_fix_count}건 치환")
+
+    # ── 검증-C: 최종 팩트체크 ──
     print("\n[검증-C] 최종 데이터 팩트체크...")
     if data.get("stocks"):
         try:
@@ -397,14 +537,14 @@ def validate_stocks(data, api_key, all_data=None):
                 name = s.get("name", "")
                 vp = s.get("verified_price")
                 if vp:
-                    price_info_lines.append("- " + name + ": " + vp["price"] + "원 (" + vp.get("change","") + ", " + vp.get("change_pct","") + ")")
+                    price_info_lines.append("- " + name + ": " + vp["price"] + "원 (" + vp.get("change", "") + ", " + vp.get("change_pct", "") + ")")
                 elif s.get("market") == "해외":
                     price_info_lines.append("- " + name + ": 해외 종목")
             for s in data.get("hidden_picks", []):
                 name = s.get("name", "")
                 vp = s.get("verified_price")
                 if vp:
-                    price_info_lines.append("- " + name + ": " + vp["price"] + "원 (" + vp.get("change","") + ", " + vp.get("change_pct","") + ")")
+                    price_info_lines.append("- " + name + ": " + vp["price"] + "원 (" + vp.get("change", "") + ", " + vp.get("change_pct", "") + ")")
             price_block = "\n".join(price_info_lines) if price_info_lines else "주가 데이터 없음"
             check_target = json.loads(json.dumps(data, ensure_ascii=False))
             for s in check_target.get("stocks", []):
@@ -439,17 +579,17 @@ def validate_stocks(data, api_key, all_data=None):
                     for orig in data.get("stocks", []):
                         for corr in corrected.get("stocks", []):
                             if corr.get("name") == orig.get("name"):
-                                for key in ["verified_price","market","naver_code","chart_base64","source_types","overlap_count","rank"]:
+                                for key in ["verified_price", "market", "naver_code", "chart_base64", "source_types", "overlap_count", "rank"]:
                                     if orig.get(key) is not None:
                                         corr[key] = orig[key]
                     for orig in data.get("hidden_picks", []):
                         for corr in corrected.get("hidden_picks", []):
                             if corr.get("name") == orig.get("name"):
-                                for key in ["verified_price","market","naver_code","chart_base64"]:
+                                for key in ["verified_price", "market", "naver_code", "chart_base64"]:
                                     if orig.get(key) is not None:
                                         corr[key] = orig[key]
-                    old_desc = {s["name"]: s.get("description","") for s in data.get("stocks",[])}
-                    new_desc = {s["name"]: s.get("description","") for s in corrected.get("stocks",[])}
+                    old_desc = {s["name"]: s.get("description", "") for s in data.get("stocks", [])}
+                    new_desc = {s["name"]: s.get("description", "") for s in corrected.get("stocks", [])}
                     changes = 0
                     for name in old_desc:
                         if name in new_desc and old_desc[name] != new_desc[name]:
@@ -526,7 +666,8 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
         "12. 뉴스 데이터를 반드시 적극 반영하세요. 뉴스에서 언급된 종목, 이슈, 시장 동향을 다른 채널(유튜브, 경제방송 등)과 교차 검증하여 분석에 포함하세요.\n"
         "13. 각 종목의 reasons에 뉴스 출처가 있으면 반드시 포함하세요. source_type은 \"뉴스\"로, source_name은 해당 언론사명으로, source_url은 기사 URL로 기재하세요.\n"
         "14. market_summary 작성 시 뉴스 기사의 팩트(수치, 정책, 이벤트 등)를 우선적으로 활용하세요. 뉴스는 가장 신뢰도 높은 1차 소스입니다.\n"
-        "15. hidden_picks의 target_price 필드에는 증권사 애널리스트 보고서의 목표가, 또는 유튜브/경제방송에서 언급된 매수·매도·적정 가격을 출처와 함께 기재하세요. 확인되지 않으면 빈 문자열로 두세요.\n\n"
+        "15. hidden_picks의 target_price 필드에는 증권사 애널리스트 보고서의 목표가, 또는 유튜브/경제방송에서 언급된 매수·매도·적정 가격을 출처와 함께 기재하세요. 확인되지 않으면 빈 문자열로 두세요.\n"
+        "16. 절대로 '특정 종목', '특정 주식', '특정 기업', '한 종목', '일부 종목' 같은 모호한 표현을 사용하지 마세요. 원본 데이터에서 언급된 실제 종목명(예: SK하이닉스, 두산에너빌리티 등)을 반드시 그대로 기재하세요. 원본에서 종목명을 확인할 수 없는 경우에만 '미공개 종목'이라고 표기하고, 그 외에는 반드시 구체적 종목명을 적으세요.\n\n"
         "JSON만 출력하고 다른 텍스트는 포함하지 마세요.\n\n"
         + CB + "json\n"
         "{\n"
@@ -623,10 +764,10 @@ def generate_html(data, channels_data=None, gh_repo=""):
     hidden_picks = data.get("hidden_picks", [])
     final_summary = data.get("final_summary", "")
 
-    # ★ 변경3: 2개 이상 채널에서 언급된 종목만 표출
+    # ★ 2개 이상 채널 언급 종목만 표출
     stocks = [s for s in stocks if s.get("overlap_count", 0) >= 2]
 
-    # ★ 변경4: 히든픽은 긍정 판단 종목만
+    # ★ 히든픽은 긍정 판단만
     hidden_picks = [s for s in hidden_picks if s.get("signal", "") == "긍정"]
 
     summary_paragraphs = market_summary.split("\n\n")
@@ -638,7 +779,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
         if ":" in para:
             colon_idx = para.index(":")
             title_part = para[:colon_idx].strip()
-            body_part = para[colon_idx+1:].strip()
+            body_part = para[colon_idx + 1:].strip()
             formatted_summary += '<div class="summary-block"><h3 class="summary-subtitle">' + title_part + '</h3><p class="summary-text">' + body_part + '</p></div>\n'
         else:
             formatted_summary += '<div class="summary-block"><p class="summary-text">' + para + '</p></div>\n'
@@ -680,8 +821,8 @@ def generate_html(data, channels_data=None, gh_repo=""):
             p = verified_price
             change_class = "price-up" if p.get("change", "").startswith("+") else "price-down"
             price_html = ('<div class="price-box">'
-                + '<span class="current-price">' + p['price'] + '&#xC6D0;</span>'
-                + '<span class="' + change_class + '">' + p.get('change', '') + ' (' + p.get('change_pct', '') + ')</span>'
+                + '<span class="current-price">' + p["price"] + '&#xC6D0;</span>'
+                + '<span class="' + change_class + '">' + p.get("change", "") + ' (' + p.get("change_pct", "") + ')</span>'
                 + '</div>')
         elif market == "해외":
             price_html = '<div class="price-box"><span class="price-note">해외 종목 (실시간 가격 미제공)</span></div>'
@@ -723,7 +864,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
             + '<div class="reasons-section"><h4>&#x1F4E2; 채널별 언급 내용</h4>' + reasons_html + '</div>'
             + '</div>\n')
 
-    # ── 히든픽 카드 HTML ──
+    # ── 히든픽 카드 ──
     hidden_html = ""
     for hp in hidden_picks:
         hp_name = hp.get("name", "")
@@ -741,8 +882,8 @@ def generate_html(data, channels_data=None, gh_repo=""):
             p = hp_verified
             change_class = "price-up" if p.get("change", "").startswith("+") else "price-down"
             hp_price_html = ('<div class="price-box">'
-                + '<span class="current-price">' + p['price'] + '&#xC6D0;</span>'
-                + '<span class="' + change_class + '">' + p.get('change', '') + ' (' + p.get('change_pct', '') + ')</span>'
+                + '<span class="current-price">' + p["price"] + '&#xC6D0;</span>'
+                + '<span class="' + change_class + '">' + p.get("change", "") + ' (' + p.get("change_pct", "") + ')</span>'
                 + '</div>')
         elif hp_market == "해외":
             hp_price_html = '<div class="price-box"><span class="price-note">해외 종목 (실시간 가격 미제공)</span></div>'
@@ -763,12 +904,12 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + '<p class="reason-detail">' + rd + '</p>'
                 + '</div>')
 
-        # ★ 변경4: target_price 블록 (info-block들 사이, catalyst와 risk 사이에 삽입)
+        # ★ target_price 블록 (주목 이유와 리스크 사이)
         target_price_html = ""
         if hp_target:
             target_price_html = '<div class="info-block"><h4>&#x1F4B0; 매수·매도 적정가격</h4><p>' + hp_target + '</p></div>'
 
-        # ★ 변경4: signal 배지 제거 (히든픽 카드에서 긍정/중립/부정 표시 삭제)
+        # ★ signal 배지 제거
         hidden_html += ('<div class="hidden-pick-card">'
             + '<div class="stock-header">'
             + '<span class="stock-rank">Hidden #' + str(hp_rank) + '</span>'
@@ -787,9 +928,9 @@ def generate_html(data, channels_data=None, gh_repo=""):
     for stock in stocks:
         b64 = stock.get("chart_base64")
         if b64:
-            chart_data_js += 'chartDataMap["' + str(stock.get("rank","")) + '"] = "data:image/png;base64,' + b64 + '";\n'
+            chart_data_js += 'chartDataMap["' + str(stock.get("rank", "")) + '"] = "data:image/png;base64,' + b64 + '";\n'
 
-    # ── 아카이브 목록 ──
+    # ── 아카이브 ──
     archive_links = ""
     if gh_repo:
         try:
@@ -802,7 +943,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
         except Exception:
             pass
 
-    # ── 최종 HTML 조립 ──
+    # ── 최종 HTML ──
     html = '''<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -869,7 +1010,7 @@ body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI',
 <div class="container">
     <div class="header">
         <h1>&#x1F4CA; AI 주식 브리핑</h1>
-        <div class="date">''' + briefing_date + ' 기준</div>' + '''
+        <div class="date">''' + briefing_date + ''' 기준</div>
         <div class="desc">최근 뉴스와 경제방송, 구독자 상위권 유튜브, 증권사 보고서에서 공통으로 언급된 종목들에 대한 브리핑입니다.</div>
     </div>
 
@@ -916,7 +1057,7 @@ body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI',
 
     html += '''
     <div class="disclaimer">
-        ⚠️ 본 브리핑은 AI가 자동 생성한 참고 자료이며, 투자 권유가 아닙니다.<br>
+        &#x26A0;&#xFE0F; 본 브리핑은 AI가 자동 생성한 참고 자료이며, 투자 권유가 아닙니다.<br>
         투자 판단의 책임은 투자자 본인에게 있습니다.
     </div>
 </div>
