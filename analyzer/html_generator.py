@@ -13,7 +13,8 @@ def generate_html(data, channels_data=None, gh_repo=""):
     hot_sectors = data.get("hot_sectors", [])
     stocks = data.get("stocks", [])
     hidden_picks = data.get("hidden_picks", [])
-    final_summary = data.get("final_summary", "")
+    # ✅ final_summary 대신 investment_strategy 사용
+    investment_strategy = data.get("investment_strategy", data.get("final_summary", ""))
 
     stocks = [s for s in stocks if s.get("overlap_count", 0) >= 2]
     hidden_picks = [s for s in hidden_picks if s.get("signal", "") == "긍정"]
@@ -95,7 +96,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         for st in source_types:
             source_tags += '<span class="source-tag">' + st + '</span>'
 
-        # ✅ 수정: change 값이 없거나 빈 문자열일 때 sign을 공백으로 처리
         price_info_text = ""
         if verified_price:
             p = verified_price
@@ -119,6 +119,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
         elif market == "해외":
             price_info_text = " (해외 종목)"
 
+        # ✅ 차트보기: naver_code 있으면 종목 페이지, 없으면 stock_map 폴백
         chart_btn_html = ""
         if chart_b64:
             chart_btn_html = (
@@ -128,9 +129,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
             )
         else:
             if naver_code:
-                naver_url = (
-                    "https://finance.naver.com/item/main.naver?code=" + naver_code
-                )
+                naver_url = "https://finance.naver.com/item/main.naver?code=" + naver_code
             else:
                 naver_url = (
                     "https://finance.naver.com/search/searchResult.naver?query="
@@ -200,7 +199,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
     for hp in hidden_picks:
         hp_name = hp.get("name", "")
         hp_rank = hp.get("rank", "")
-        hp_signal = hp.get("signal", "긍정")
         hp_desc = hp.get("description", "")
         hp_catalyst = hp.get("catalyst", "")
         hp_risk = hp.get("risk", "")
@@ -215,7 +213,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         hp_price_html = ""
         if hp_verified:
             p = hp_verified
-            # ✅ 수정: hidden pick도 동일하게 sign 방어 처리
             change_val = p.get("change", "")
             if change_val.startswith("+"):
                 change_class = "price-up"
@@ -247,9 +244,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
             )
         else:
             if hp_naver_code:
-                hp_naver_url = (
-                    "https://finance.naver.com/item/main.naver?code=" + hp_naver_code
-                )
+                hp_naver_url = "https://finance.naver.com/item/main.naver?code=" + hp_naver_code
             else:
                 hp_naver_url = (
                     "https://finance.naver.com/search/searchResult.naver?query="
@@ -422,9 +417,9 @@ def generate_html(data, channels_data=None, gh_repo=""):
         '.source-link { color: #51cf66; font-size: 0.78em; text-decoration: none; }\n'
         '.source-link:hover { text-decoration: underline; }\n'
         '.reason-detail { color: #aaa; font-size: 0.85em; }\n'
-        '.final-summary { background: linear-gradient(135deg, #141420, #1a1a2e); '
+        '.strategy-block { background: linear-gradient(135deg, #141420, #1a1a2e); '
         'border: 1px solid #667eea30; border-radius: 12px; padding: 20px; }\n'
-        '.final-summary p { color: #ccc; font-size: 0.92em; }\n'
+        '.strategy-block p { color: #ccc; font-size: 0.92em; line-height: 1.8; }\n'
         '.disclaimer { text-align: center; color: #666; font-size: 0.78em; '
         'margin-top: 30px; padding: 15px; border-top: 1px solid #1e1e2e; }\n'
         '.archive-section { margin-top: 20px; }\n'
@@ -475,15 +470,17 @@ def generate_html(data, channels_data=None, gh_repo=""):
             '    </div>\n'
         )
 
-    html += (
-        '\n'
-        '    <div class="section">\n'
-        '        <h2 class="section-title">&#x1F4DD; AI 최종 요약</h2>\n'
-        '        <div class="final-summary">\n'
-        '            <p>' + final_summary + '</p>\n'
-        '        </div>\n'
-        '    </div>\n'
-    )
+    # ✅ 'AI 최종 요약' → 'AI 투자 전략'으로 변경
+    if investment_strategy:
+        html += (
+            '\n'
+            '    <div class="section">\n'
+            '        <h2 class="section-title">&#x1F4B0; AI 투자 전략</h2>\n'
+            '        <div class="strategy-block">\n'
+            '            <p>' + investment_strategy + '</p>\n'
+            '        </div>\n'
+            '    </div>\n'
+        )
 
     if archive_links:
         html += (
