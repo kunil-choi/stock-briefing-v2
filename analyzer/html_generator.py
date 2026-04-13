@@ -60,6 +60,10 @@ def generate_html(data, channels_data=None, gh_repo=""):
         verified_price = stock.get("verified_price")
         chart_b64 = stock.get("chart_base64")
         market = stock.get("market", "국내")
+        # ✅ 종목 코드: verified_price 또는 naver_code에서 추출
+        naver_code = stock.get("naver_code", "")
+        if not naver_code and verified_price:
+            naver_code = verified_price.get("code", "")
 
         if signal == "긍정":
             signal_class = "signal-positive"
@@ -68,7 +72,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         else:
             signal_class = "signal-neutral"
 
-        # ✅ 수정: 올바른 인덴테이션으로 채널별 횟수 상세 표시
         channel_counts = stock.get("channel_counts", {})
         total_count = stock.get("total_count", overlap)
 
@@ -93,7 +96,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         for st in source_types:
             source_tags += '<span class="source-tag">' + st + '</span>'
 
-        # 주가 정보
         price_info_text = ""
         if verified_price:
             p = verified_price
@@ -106,7 +108,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
         elif market == "해외":
             price_info_text = " (해외 종목)"
 
-        # ✅ 수정: 차트 버튼 onclick에 rank를 직접 전달
+        # ✅ 수정: 종목 코드가 있으면 코드 기반 URL, 없으면 종목명 검색 URL
         chart_btn_html = ""
         if chart_b64:
             chart_btn_html = (
@@ -115,10 +117,15 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 ' title="14일 주가 차트 보기">&#x1F4C8; 차트보기</span>'
             )
         else:
-            naver_url = (
-                "https://finance.naver.com/item/main.naver?query="
-                + requests.utils.quote(name)
-            )
+            if naver_code:
+                naver_url = (
+                    "https://finance.naver.com/item/main.naver?code=" + naver_code
+                )
+            else:
+                naver_url = (
+                    "https://finance.naver.com/search/searchResult.naver?query="
+                    + requests.utils.quote(name)
+                )
             chart_btn_html = (
                 ' <a href="' + naver_url + '" target="_blank"'
                 ' class="chart-icon" title="네이버 금융에서 차트 보기">'
@@ -191,6 +198,10 @@ def generate_html(data, channels_data=None, gh_repo=""):
         hp_verified = hp.get("verified_price")
         hp_market = hp.get("market", "국내")
         hp_chart_b64 = hp.get("chart_base64")
+        # ✅ hidden pick도 종목 코드 추출
+        hp_naver_code = hp.get("naver_code", "")
+        if not hp_naver_code and hp_verified:
+            hp_naver_code = hp_verified.get("code", "")
 
         hp_price_html = ""
         if hp_verified:
@@ -213,7 +224,7 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 '</div>'
             )
 
-        # ✅ 추가: hidden pick 차트 버튼
+        # ✅ 수정: hidden pick 차트 버튼도 코드 기반 URL 사용
         hp_chart_btn = ""
         if hp_chart_b64:
             hp_chart_btn = (
@@ -222,10 +233,15 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 ' title="14일 주가 차트 보기">&#x1F4C8; 차트보기</span>'
             )
         else:
-            hp_naver_url = (
-                "https://finance.naver.com/item/main.naver?query="
-                + requests.utils.quote(hp_name)
-            )
+            if hp_naver_code:
+                hp_naver_url = (
+                    "https://finance.naver.com/item/main.naver?code=" + hp_naver_code
+                )
+            else:
+                hp_naver_url = (
+                    "https://finance.naver.com/search/searchResult.naver?query="
+                    + requests.utils.quote(hp_name)
+                )
             hp_chart_btn = (
                 ' <a href="' + hp_naver_url + '" target="_blank"'
                 ' class="chart-icon" title="네이버 금융에서 차트 보기">'
@@ -290,7 +306,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 'chartDataMap["' + str(stock.get("rank", ""))
                 + '"] = "data:image/png;base64,' + b64 + '";\n'
             )
-    # ✅ 추가: hidden pick 차트도 맵에 등록
     for hp in hidden_picks:
         b64 = hp.get("chart_base64")
         if b64:
@@ -476,7 +491,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         '<script>\n'
         + chart_data_js
         + '\n'
-        # ✅ 수정: event 객체 없이 chartKey를 직접 인자로 받음
         'function openChartWindow(stockName, chartKey) {\n'
         '    var src = chartDataMap[chartKey];\n'
         '    if (src) {\n'
