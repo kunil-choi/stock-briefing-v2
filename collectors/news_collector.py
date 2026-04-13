@@ -17,7 +17,9 @@ def fetch_article_body(url, max_chars=1500):
         resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        for tag in soup.select("script, style, nav, header, footer, aside, .ad, .banner, .comment"):
+        for tag in soup.select(
+            "script, style, nav, header, footer, aside, .ad, .banner, .comment"
+        ):
             tag.decompose()
 
         selectors = [
@@ -45,7 +47,11 @@ def fetch_article_body(url, max_chars=1500):
 
         if len(body_text) < 100:
             paragraphs = soup.select("p")
-            texts = [p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 30]
+            texts = [
+                p.get_text(strip=True)
+                for p in paragraphs
+                if len(p.get_text(strip=True)) > 30
+            ]
             body_text = " ".join(texts)
 
         body_text = re.sub(r'\s+', ' ', body_text).strip()
@@ -58,7 +64,7 @@ def fetch_article_body(url, max_chars=1500):
 
 def collect_news(rss_feeds: dict) -> list:
     """
-    뉴스 RSS에서 최근 24시간 이내 증권 관련 기사를 수집하고
+    뉴스 RSS에서 최근 24시간 이내 기사를 수집하고
     본문을 크롤링하여 풍부한 데이터를 제공합니다.
     """
     results = []
@@ -67,27 +73,28 @@ def collect_news(rss_feeds: dict) -> list:
     for source_name, rss_url in rss_feeds.items():
         try:
             feed = feedparser.parse(rss_url)
-            # ✅ 수정: 본문 크롤링 전용 카운터를 별도로 관리
+            # ✅ 크롤링 전용 카운터 분리 (날짜 없는 기사가 슬롯을 점유하지 않도록)
             crawl_count = 0
 
             for entry in feed.entries[:30]:
                 published = None
-                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                if hasattr(entry, "published_parsed") and entry.published_parsed:
                     published = datetime(*entry.published_parsed[:6])
 
-                # 24시간 이내 기사만 수집
+                # ✅ 날짜가 있는 기사는 24시간 이내만 수집
                 if published and published < cutoff:
                     continue
 
+                # ✅ 날짜가 없는 기사(published=None)는 크롤링 슬롯을 소비하지 않음
                 title = entry.get("title", "")
                 rss_summary = entry.get("summary", "")
                 link = entry.get("link", "")
 
-                # ✅ 수정: crawl_count로 본문 크롤링 15건 제한을 정확히 제어
                 body = ""
-                if link and crawl_count < 15:
+                if link and published and crawl_count < 15:
+                    # 날짜가 확인된 기사만 크롤링 슬롯 사용
                     body = fetch_article_body(link, max_chars=1500)
-                    crawl_count += 1  # 크롤링 시도 시에만 카운트 증가
+                    crawl_count += 1
 
                 summary = body if len(body) > len(rss_summary) else rss_summary
 
