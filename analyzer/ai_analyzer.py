@@ -17,12 +17,11 @@ CB = "\u0060\u0060\u0060"
 # ──────────────────────────────────────────
 def load_stock_names() -> dict:
     """
-    네이버 금융에서 코스피/코스닥 전체 종목명 목록을 가져옵니다.
-    당일 캐시가 있으면 캐시를 사용하고, 없으면 크롤링 후 저장합니다.
+    KRX(한국거래소) 공식 API에서 코스피/코스닥 전체 종목 목록을 가져옵니다.
+    당일 캐시가 있으면 캐시를 사용합니다.
     반환: {종목명: 종목코드}
     """
     import requests
-    from bs4 import BeautifulSoup
 
     cache_path = "data/stock_names_cache.json"
     today = datetime.now(KST).strftime("%Y-%m-%d")
@@ -38,64 +37,111 @@ def load_stock_names() -> dict:
         except Exception:
             pass
 
-    # 캐시 없으면 크롤링
-    print("  [종목목록] 네이버 금융 크롤링 시작...")
+    print("  [종목목록] KRX 종목 목록 로드 중...")
     stock_map = {}
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "http://data.krx.co.kr/",
+    }
 
-    for market in [0, 1]:
-        market_name = "코스피" if market == 0 else "코스닥"
+    for market_id, market_name in [("STK", "코스피"), ("KSQ", "코스닥")]:
         try:
-            # 1페이지로 전체 페이지 수 확인
-            url = (f"https://finance.naver.com/sise/sise_market_sum.naver"
-                   f"?sosok={market}&page=1")
-            res = requests.get(url, headers=headers, timeout=10)
-            res.encoding = "euc-kr"
-            soup = BeautifulSoup(res.text, "html.parser")
-
-            last_page = 1
-            for td in soup.select("table.Nnavi td"):
-                a = td.select_one("a")
-                if a:
-                    try:
-                        p = int(a.text.strip())
-                        if p > last_page:
-                            last_page = p
-                    except Exception:
-                        pass
-
-            print(f"  [{market_name}] 총 {last_page}페이지 수집 중...")
-
-            for page in range(1, last_page + 1):
-                try:
-                    page_url = (f"https://finance.naver.com/sise/"
-                                f"sise_market_sum.naver"
-                                f"?sosok={market}&page={page}")
-                    res2 = requests.get(page_url, headers=headers, timeout=10)
-                    res2.encoding = "euc-kr"
-                    soup2 = BeautifulSoup(res2.text, "html.parser")
-                    for row in soup2.select("table.type_2 tr"):
-                        link = row.select_one("td.col_name a")
-                        if link:
-                            name = link.text.strip()
-                            href = link.get("href", "")
-                            code_match = re.search(r"code=(\d{6})", href)
-                            if name and code_match:
-                                stock_map[name] = code_match.group(1)
-                except Exception:
-                    continue
-
-            print(f"  [{market_name}] 완료: 누적 {len(stock_map)}개")
-
+            url = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
+            params = {
+                "bld": "dbms/MDC/STAT/standard/MDCSTAT01901",
+                "mktId": market_id,
+                "share": "1",
+                "money": "1",
+                "csvxls_isNo": "false",
+            }
+            res = requests.post(url, data=params, headers=headers, timeout=15)
+            data = res.json()
+            items = data.get("OutBlock_1", [])
+            for item in items:
+                name = item.get("ISU_ABBRV", "").strip()
+                code = item.get("ISU_SRT_CD", "").strip()
+                if name and code:
+                    stock_map[name] = code
+            print(f"  [{market_name}] {len(items)}개 로드")
         except Exception as e:
-            print(f"  [{market_name}] 오류: {e}")
+            print(f"  [{market_name}] KRX 오류: {e}")
+
+    # KRX 실패시 하드코딩 주요 종목으로 폴백
+    if not stock_map:
+        print("  [종목목록] KRX 실패 -> 주요 종목 폴백 사용")
+        stock_map = {
+            # 코스피 대형주
+            "삼성전자": "005930", "SK하이닉스": "000660", "LG에너지솔루션": "373220",
+            "삼성바이오로직스": "207940", "현대차": "005380", "기아": "000270",
+            "셀트리온": "068270", "POSCO홀딩스": "005490", "KB금융": "105560",
+            "신한지주": "055550", "하나금융지주": "086790", "우리금융지주": "316140",
+            "LG화학": "051910", "삼성SDI": "006400", "현대모비스": "012330",
+            "카카오": "035720", "NAVER": "035420", "LG전자": "066570",
+            "삼성물산": "028260", "SK텔레콤": "017670", "KT": "030200",
+            "삼성생명": "032830", "삼성화재": "000810", "메리츠금융지주": "138040",
+            "한화에어로스페이스": "012450", "두산에너빌리티": "034020",
+            "HD현대중공업": "329180", "HD한국조선해양": "009540",
+            "HD현대": "267250", "현대건설": "000720", "GS건설": "006360",
+            "대우건설": "047040", "삼성엔지니어링": "028050",
+            "SK이노베이션": "096770", "S-Oil": "010950", "GS": "078930",
+            "SK": "034730", "LG": "003550", "롯데지주": "004990",
+            "CJ": "001040", "한화": "000880", "두산": "000150",
+            "LS": "006260", "LS일렉트릭": "010120", "HD현대일렉트릭": "267260",
+            "효성중공업": "298040", "LIG넥스원": "079550",
+            "한국항공우주": "047810", "현대로템": "064350",
+            "한화시스템": "272210", "한화오션": "042660",
+            "포스코퓨처엠": "003670", "롯데케미칼": "011170",
+            "금호석유": "011780", "한화솔루션": "009830", "OCI홀딩스": "010060",
+            "SK가스": "018670", "한국가스공사": "036460", "한국전력": "015760",
+            "한국전력기술": "050540", "두산밥캣": "241560", "두산퓨얼셀": "336260",
+            "삼성전기": "009150", "삼성SDS": "018260", "삼성증권": "016360",
+            "미래에셋증권": "006800", "NH투자증권": "005940", "키움증권": "039490",
+            "대신증권": "003540", "메리츠증권": "008560",
+            "SK바이오사이언스": "302440", "SK바이오팜": "326030",
+            "HLB": "028300", "유한양행": "000100", "종근당": "185750",
+            "대웅제약": "069620", "한미약품": "128940", "동아에스티": "170900",
+            "녹십자": "006280", "보령": "003850",
+            "만도": "204320", "한온시스템": "018880", "현대위아": "011210",
+            "하이브": "352820", "SM": "041510", "JYP Ent": "035900",
+            "CJ ENM": "035760", "스튜디오드래곤": "253450",
+            "엔씨소프트": "036570", "넷마블": "251270",
+            "크래프톤": "259960", "카카오게임즈": "293490", "펄어비스": "263750",
+            "컴투스": "078340", "위메이드": "112040",
+            # 코스닥 대형주
+            "에코프로": "086520", "에코프로비엠": "247540",
+            "에코프로머티리얼즈": "450080", "엘앤에프": "066970",
+            "천보": "278280", "나노신소재": "121600",
+            "솔브레인": "357780", "동화기업": "025900",
+            "씨에스윈드": "112610", "한솔테크닉스": "004710",
+            "이수페타시스": "007660", "원익IPS": "240810",
+            "피에스케이": "319660", "HPSP": "403870",
+            "레인보우로보틱스": "277810", "두산로보틱스": "454910",
+            "HLB생명과학": "067630", "알테오젠": "196170",
+            "리가켐바이오": "141080", "오스코텍": "039200",
+            "메디톡스": "086900", "클래시스": "214150",
+            "루닛": "328130", "뷰노": "338220",
+            "카카오페이": "377300", "카카오뱅크": "323410",
+            "더존비즈온": "012510", "셀바스AI": "108860",
+            "NICE평가정보": "030190", "BGF리테일": "282330",
+            "GS리테일": "007070", "이마트": "139480",
+            "롯데쇼핑": "023530", "현대백화점": "069960",
+            "신세계": "004170", "호텔신라": "008770",
+            "파라다이스": "034230", "강원랜드": "035250",
+            "CJ대한통운": "000120", "대한항공": "003490",
+            "아시아나항공": "020560", "제주항공": "089590",
+            "현대글로비스": "086280", "팬오션": "028670",
+            "HMM": "011200", "고려아연": "010130",
+            "KCC": "002380", "삼성중공업": "010140",
+            "포스코인터내셔널": "047050", "LX인터내셔널": "001120",
+            "SK에코플랜트": "034300",
+        }
 
     # 캐시 저장
     os.makedirs("data", exist_ok=True)
     with open(cache_path, "w", encoding="utf-8") as f:
         json.dump({"date": today, "stocks": stock_map}, f, ensure_ascii=False)
 
-    print(f"  [종목목록] 총 {len(stock_map)}개 종목 로드 및 캐시 저장")
+    print(f"  [종목목록] 총 {len(stock_map)}개 로드 완료")
     return stock_map
 
 
@@ -119,7 +165,6 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
         }
     }
     """
-    # 소스 타입 정규화
     type_map = {
         "뉴스": "뉴스",
         "경제방송": "경제방송",
@@ -128,7 +173,6 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
         "애널리스트": "애널리스트",
     }
 
-    # 일반명사와 혼동될 수 있는 짧은 종목명 제외
     skip_names = {
         "삼성", "현대", "LG", "SK", "롯데", "한국", "대한", "국민",
         "신한", "우리", "하나", "기업", "산업", "전자", "화학",
@@ -199,7 +243,8 @@ def filter_mentions(mentions: dict, min_channel_types: int = 2) -> dict:
         key=lambda x: x[1]["total"],
         reverse=True
     ))
-    print(f"  [필터] {len(filtered)}개 종목 선별 (2개 이상 채널, 총 언급횟수 순)")
+    print(f"  [필터] {len(filtered)}개 종목 선별 "
+          f"(2개 이상 채널, 총 언급횟수 순)")
     return filtered
 
 
@@ -212,7 +257,6 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
     선별된 종목들에 대해 각 채널 녹취록 발언 내용과
     긍정/중립/부정을 분석하는 프롬프트 생성
     """
-    # 종목별 관련 원문 텍스트 정리
     stock_contexts = ""
     for rank, (name, data) in enumerate(filtered_mentions.items(), 1):
         if rank > 15:
@@ -228,7 +272,6 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
                 stock_contexts += (f"- [{item['source_name']}] "
                                    f"{item['text']}\n")
 
-    # 시장 전체 맥락용 뉴스 헤드라인
     news_headlines = ""
     for item in all_data:
         if item.get("source_type") == "뉴스":
@@ -248,8 +291,7 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
         f"3. signal은 긍정/부정/중립 발언 횟수를 합산해 다수결로 결정하세요.\n"
         f"4. channel_counts는 각 채널별 실제 언급 횟수를 그대로 기재하세요.\n"
         f"5. total_count는 모든 채널 언급 횟수의 합계입니다.\n"
-        f"6. overlap_count는 언급된 채널 종류의 수입니다 "
-        f"(뉴스/경제방송/유튜브/애널리스트 중 1개 이상인 채널 수).\n"
+        f"6. overlap_count는 언급된 채널 종류의 수입니다.\n"
         f"7. reasons에는 채널별 실제 발언 내용을 구체적으로 요약하세요. "
         f"모호한 표현 없이 반드시 종목명을 명시하세요.\n"
         f"8. hidden_picks는 공통 언급 종목 외에 한 채널에서만 언급됐지만 "
