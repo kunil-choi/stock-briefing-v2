@@ -895,17 +895,17 @@ def generate_html(data, channels_data=None, gh_repo=""):
     archive_links = ""
     if gh_repo:
         try:
-            docs_dir = "docs"
-            if os.path.isdir(docs_dir):
+            archive_dir = os.path.join("docs", "archive")
+            if os.path.isdir(archive_dir):
                 archive_files = sorted(
-                    [f for f in os.listdir(docs_dir) if f.startswith("archive_") and f.endswith(".html")],
+                    [f for f in os.listdir(archive_dir) if f.endswith(".html")],
                     reverse=True
                 )
+                repo_owner = gh_repo.split("/")[0]
+                repo_name = gh_repo.split("/")[1]
                 for af in archive_files[:14]:
-                    date_str = af.replace("archive_", "").replace(".html", "")
-                    repo_owner = gh_repo.split("/")[0]
-                    repo_name = gh_repo.split("/")[1]
-                    archive_links += '<a href="https://' + repo_owner + '.github.io/' + repo_name + '/' + af + '" class="archive-link">' + date_str + '</a>\n'
+                    date_str = af.replace(".html", "")
+                    archive_links += '<a href="https://' + repo_owner + '.github.io/' + repo_name + '/archive/' + af + '" class="archive-link">' + date_str + '</a>\n'
         except Exception:
             pass
 
