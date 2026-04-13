@@ -17,24 +17,22 @@ def fetch_article_body(url, max_chars=1500):
         resp.encoding = resp.apparent_encoding or "utf-8"
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # 불필요한 태그 제거
         for tag in soup.select("script, style, nav, header, footer, aside, .ad, .banner, .comment"):
             tag.decompose()
 
-        # 언론사별 본문 셀렉터 (우선순위 순서)
         selectors = [
-            "div#newsct_article",        # 네이버 뉴스
-            "div.article_body",          # 한국경제
-            "div#article_body",          # 매일경제
-            "div.article-body",          # 서울경제
-            "article#article-view-content-div",  # 이데일리
-            "div#textBody",              # 머니투데이
-            "div#news_body_area",        # 조선비즈
-            "div.news_cnt_detail_wrap",  # 연합뉴스
-            "article",                   # 범용
-            "div.article_txt",           # 범용
-            "div.article_content",       # 범용
-            "div.news_body",             # 범용
+            "div#newsct_article",
+            "div.article_body",
+            "div#article_body",
+            "div.article-body",
+            "article#article-view-content-div",
+            "div#textBody",
+            "div#news_body_area",
+            "div.news_cnt_detail_wrap",
+            "article",
+            "div.article_txt",
+            "div.article_content",
+            "div.news_body",
         ]
 
         body_text = ""
@@ -42,16 +40,14 @@ def fetch_article_body(url, max_chars=1500):
             el = soup.select_one(selector)
             if el:
                 body_text = el.get_text(separator=" ", strip=True)
-                if len(body_text) > 100:  # 의미있는 텍스트인지 확인
+                if len(body_text) > 100:
                     break
 
-        # 셀렉터로 못 찾으면 <p> 태그 모음으로 시도
         if len(body_text) < 100:
             paragraphs = soup.select("p")
             texts = [p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 30]
             body_text = " ".join(texts)
 
-        # 정리
         body_text = re.sub(r'\s+', ' ', body_text).strip()
         return body_text[:max_chars] if body_text else ""
 
@@ -72,22 +68,23 @@ def collect_news(rss_feeds: dict) -> list:
         try:
             feed = feedparser.parse(rss_url)
             collected = 0
-            for entry in feed.entries[:30]:  # 최근 30개
-                # 발행일 파싱
+            for entry in feed.entries[:30]:
                 published = None
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     published = datetime(*entry.published_parsed[:6])
+
+                # ✅ 수정: cutoff 기준으로 24시간 이내 기사만 수집
+                if published and published < cutoff:
+                    continue
 
                 title = entry.get("title", "")
                 rss_summary = entry.get("summary", "")
                 link = entry.get("link", "")
 
-                # 본문 크롤링 (link가 있으면 시도)
                 body = ""
-                if link and collected < 15:  # 언론사당 최대 15개만 본문 크롤링 (속도/부하 고려)
+                if link and collected < 15:
                     body = fetch_article_body(link, max_chars=1500)
 
-                # summary: 본문 > RSS summary 순서로 사용
                 summary = body if len(body) > len(rss_summary) else rss_summary
 
                 results.append({
