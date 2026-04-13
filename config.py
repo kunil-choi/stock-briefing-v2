@@ -14,13 +14,16 @@ CHANNELS_FILE = "channels.json"
 # 채널 관리 패널 비밀번호
 PANEL_PASSWORD = "stock2026!"
 
-# === 뉴스 RSS ===
+# === 뉴스 RSS === (기존 부분을 아래로 교체)
 NEWS_RSS_FEEDS = {
-    "한국경제": "https://www.hankyung.com/feed/stock",
+    "한국경제": "https://www.hankyung.com/feed/finance",
     "매일경제": "https://www.mk.co.kr/rss/30100041/",
     "연합뉴스 경제": "https://www.yna.co.kr/rss/economy.xml",
     "이데일리": "https://rss.edaily.co.kr/edaily_stock.xml",
     "머니투데이": "https://rss.mt.co.kr/mt_stock.xml",
+    "서울경제 증권": "https://m.sedaily.com/rss/finance",
+    "조선비즈": "https://biz.chosun.com/site/data/rss/rss.xml",
+    "한국경제 전체": "https://www.hankyung.com/feed/all-news",
 }
 
 # === 인기 패널 목록 (최근 1개월 내 3회 이상 출연) ===
