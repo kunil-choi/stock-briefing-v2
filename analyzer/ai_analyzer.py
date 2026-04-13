@@ -897,7 +897,7 @@ body { background:#0a0a14; color:#e0e0e0; font-family:'Pretendard',-apple-system
         + '<title>주식 투자 AI 브리핑 - ' + briefing_date + '</title>\n'
         + '<style>\n' + css_block + '\n</style>\n</head>\n<body>\n\n'
         + '<div class="header">\n<h1>&#x1F4CA; 주식 투자 AI 브리핑</h1>\n'
-        + '<div class="subtitle">&#x1F4E1; 뉴스 &#xB7; 경제방송 &#xB7; 유튜브 &#xB7; 애널리스트 보고서 분석</div>\n'
+        + '<div class="subtitle">최근 뉴스와 경제방송, 구독자 상위권 유튜브, 증권사 보고서에서 공통으로 언급된 종목들에 대한 브리핑입니다.</div>\n'
         + '<div class="date">' + briefing_date + ' | AI 자동 분석 리포트</div>\n</div>\n\n'
         + '<div class="section">\n<h2 class="section-title">&#x1F30F; 시장 종합 요약</h2>\n'
         + '<div class="market-summary">' + formatted_summary + '</div>\n</div>\n\n'
