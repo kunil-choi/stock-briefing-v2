@@ -2,10 +2,9 @@ import anthropic
 import time
 
 CLAUDE_MODELS = [
-    "claude-sonnet-4-5",
-    "claude-3-7-sonnet-20250219",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-haiku-20241022",
+    "claude-sonnet-4-6",          # ✅ 현재 최신 모델
+    "claude-3-5-sonnet-20241022", # ✅ 검증된 폴백
+    "claude-3-5-haiku-20241022",  # ✅ 경량 폴백
 ]
 
 
