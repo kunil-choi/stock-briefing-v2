@@ -60,7 +60,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         verified_price = stock.get("verified_price")
         chart_b64 = stock.get("chart_base64")
         market = stock.get("market", "국내")
-        # ✅ 종목 코드: verified_price 또는 naver_code에서 추출
         naver_code = stock.get("naver_code", "")
         if not naver_code and verified_price:
             naver_code = verified_price.get("code", "")
@@ -108,7 +107,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         elif market == "해외":
             price_info_text = " (해외 종목)"
 
-        # ✅ 수정: 종목 코드가 있으면 코드 기반 URL, 없으면 종목명 검색 URL
         chart_btn_html = ""
         if chart_b64:
             chart_btn_html = (
@@ -198,7 +196,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         hp_verified = hp.get("verified_price")
         hp_market = hp.get("market", "국내")
         hp_chart_b64 = hp.get("chart_base64")
-        # ✅ hidden pick도 종목 코드 추출
         hp_naver_code = hp.get("naver_code", "")
         if not hp_naver_code and hp_verified:
             hp_naver_code = hp_verified.get("code", "")
@@ -224,7 +221,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 '</div>'
             )
 
-        # ✅ 수정: hidden pick 차트 버튼도 코드 기반 URL 사용
         hp_chart_btn = ""
         if hp_chart_b64:
             hp_chart_btn = (
@@ -314,19 +310,25 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + '"] = "data:image/png;base64,' + b64 + '";\n'
             )
 
-    # ── 아카이브 링크 ──
+    # ── 아카이브 링크 (GitHub API 방식) ──
     archive_links = ""
     if gh_repo:
         try:
-            archive_dir = os.path.join("docs", "archive")
-            if os.path.isdir(archive_dir):
-                archive_files = sorted(
-                    [f for f in os.listdir(archive_dir) if f.endswith(".html")],
+            repo_owner = gh_repo.split("/")[0]
+            repo_name = gh_repo.split("/")[1]
+            api_url = (
+                "https://api.github.com/repos/"
+                + repo_owner + "/" + repo_name
+                + "/contents/docs/archive"
+            )
+            resp = requests.get(api_url, timeout=10)
+            if resp.status_code == 200:
+                files = resp.json()
+                html_files = sorted(
+                    [f["name"] for f in files if f["name"].endswith(".html")],
                     reverse=True,
                 )
-                repo_owner = gh_repo.split("/")[0]
-                repo_name = gh_repo.split("/")[1]
-                for af in archive_files[:14]:
+                for af in html_files[:14]:
                     date_str = af.replace(".html", "")
                     archive_links += (
                         '<a href="https://' + repo_owner + '.github.io/'
