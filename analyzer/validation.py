@@ -177,7 +177,7 @@ def validate_stocks(data, api_key, all_data=None):
             stock["verified_price"] = None
             stock["chart_base64"] = None
 
-    # ✅ 수정: hidden_picks도 차트 생성하도록 변경
+    # hidden_picks 차트 생성
     for stock in data.get("hidden_picks", []):
         name = stock.get("name", "")
         is_foreign = any(kw in name for kw in foreign_keywords)
@@ -214,8 +214,6 @@ def validate_stocks(data, api_key, all_data=None):
             print(f"  [WARN] {name}: 네이버 검색 실패 (히든픽)")
             stock["verified_price"] = None
             stock["chart_base64"] = None
-
-    # 검증-D 제거: 모호 표현 치환은 2단계 Claude 분석에서 처리
 
     # ── 검증-C: 팩트체크 ──
     print("\n[검증-C] 최종 데이터 팩트체크...")
@@ -320,6 +318,8 @@ def validate_stocks(data, api_key, all_data=None):
                 json_match = re.search(r'\{[\s\S]*\}', fc_result)
                 if json_match:
                     corrected = json.loads(json_match.group())
+
+                    # ✅ 수정: None이어도 항상 원본 값으로 덮어쓰기
                     for orig in data.get("stocks", []):
                         for corr in corrected.get("stocks", []):
                             if corr.get("name") == orig.get("name"):
@@ -328,8 +328,8 @@ def validate_stocks(data, api_key, all_data=None):
                                     "chart_base64", "source_types",
                                     "overlap_count", "rank",
                                 ]:
-                                    if orig.get(key) is not None:
-                                        corr[key] = orig[key]
+                                    corr[key] = orig.get(key)
+
                     for orig in data.get("hidden_picks", []):
                         for corr in corrected.get("hidden_picks", []):
                             if corr.get("name") == orig.get("name"):
@@ -337,8 +337,7 @@ def validate_stocks(data, api_key, all_data=None):
                                     "verified_price", "market",
                                     "naver_code", "chart_base64",
                                 ]:
-                                    if orig.get(key) is not None:
-                                        corr[key] = orig[key]
+                                    corr[key] = orig.get(key)
 
                     old_desc = {
                         s["name"]: s.get("description", "")
