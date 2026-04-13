@@ -516,8 +516,10 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
         "8. reasons의 각 detail은 100자 내외로 해당 채널에서 언급된 내용을 충실하게 설명하세요.\n"
         "9. reasons의 source_type은 반드시 \"뉴스\", \"경제방송\", \"유튜브\", \"애널리스트리포트\" 중 하나여야 합니다.\n"
         "10. reasons에 source_url 필드를 포함하세요. 원본 데이터에 URL이 있으면 해당 URL을, 없으면 빈 문자열을 넣으세요.\n"
-        "11. final_summary(AI 최종 요약)는 시장 전망과 함께 구체적인 투자 전략 조언(업종 배분, 매매 타이밍, 리스크 관리 등)을 포함하여 400자 내외로 작성하세요.\n\n"
-        "JSON만 출력하고 다른 텍스트는 포함하지 마세요.\n\n"
+        "11. final_summary(AI 최종 요약)는 시장 전망과 함께 구체적인 투자 전략 조언(업종 배분, 매매 타이밍, 리스크 관리 등)을 포함하여 400자 내외로 작성하세요.\n"
+        "12. 뉴스 데이터를 반드시 적극 반영하세요. 뉴스에서 언급된 종목, 이슈, 시장 동향을 다른 채널(유튜브, 경제방송 등)과 교차 검증하여 분석에 포함하세요.\n"
+        "13. 각 종목의 reasons에 뉴스 출처가 있으면 반드시 포함하세요. source_type은 \"뉴스\"로, source_name은 해당 언론사명으로, source_url은 기사 URL로 기재하세요.\n"
+        "14. market_summary 작성 시 뉴스 기사의 팩트(수치, 정책, 이벤트 등)를 우선적으로 활용하세요. 뉴스는 가장 신뢰도 높은 1차 소스입니다.\n\n"
         + CB + "json\n"
         "{\n"
         '  "briefing_date": "' + today_date + '",\n'
