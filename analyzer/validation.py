@@ -1,3 +1,4 @@
+# analyzer/validation.py
 import re
 import json
 from .api_client import call_claude_with_retry
@@ -362,11 +363,15 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     data["stocks"] = corrected.get("stocks", data["stocks"])
                     data["hidden_picks"] = corrected.get("hidden_picks", data["hidden_picks"])
 
-                    # ✅ 수정: 빈 값이 아닐 때만 덮어쓰기 (원본 유실 방지)
+                    # ✅ 수정: market_summary / investment_strategy — 빈 값이면 원본 유지
                     if corrected.get("market_summary"):
                         data["market_summary"] = corrected["market_summary"]
                     if corrected.get("investment_strategy"):
                         data["investment_strategy"] = corrected["investment_strategy"]
+
+                    # ✅ 수정: hot_sectors — 빈 리스트면 원본 유지
+                    if corrected.get("hot_sectors"):
+                        data["hot_sectors"] = corrected["hot_sectors"]
 
                     print("[검증-C] 완료")
                 else:
