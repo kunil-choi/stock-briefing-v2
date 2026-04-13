@@ -1,3 +1,4 @@
+# analyzer/naver_finance.py
 import re
 import io
 import base64
@@ -40,7 +41,6 @@ def fetch_naver_stock_price(stock_name, code_override=None):
         res = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # ✅ 셀렉터 다중 폴백: 구조 변경에 대비
         price = None
         price_selectors = [
             "#chart_area > div.rate_info > div > p.no_today > em > span.blind",
@@ -72,7 +72,6 @@ def fetch_naver_stock_price(stock_name, code_override=None):
         change = blind_spans[0].text.strip() if len(blind_spans) > 0 else None
         change_pct = blind_spans[1].text.strip() if len(blind_spans) > 1 else None
 
-        # 등락 방향 판별
         is_down = False
         no_exday = soup.select_one(
             "#chart_area > div.rate_info > div > p.no_exday"
@@ -124,11 +123,27 @@ def fetch_naver_daily_prices(code, days=14):
         for _, row in df.iterrows():
             try:
                 date_str = str(row.iloc[0]).strip()
-                close = int(float(str(row.iloc[1]).replace(",", "").strip()))
-                open_p = int(float(str(row.iloc[3]).replace(",", "").strip()))
-                high = int(float(str(row.iloc[4]).replace(",", "").strip()))
-                low = int(float(str(row.iloc[5]).replace(",", "").strip()))
-                volume = int(float(str(row.iloc[6]).replace(",", "").strip()))
+
+                # ✅ 수정: 날짜 형식 유효성 검증 — 숫자와 점(.)으로만 이루어진 날짜만 허용
+                if not re.match(r'^\d{4}\.\d{2}\.\d{2}$', date_str):
+                    continue
+
+                close_str = str(row.iloc[1]).replace(",", "").strip()
+                open_str  = str(row.iloc[3]).replace(",", "").strip()
+                high_str  = str(row.iloc[4]).replace(",", "").strip()
+                low_str   = str(row.iloc[5]).replace(",", "").strip()
+                vol_str   = str(row.iloc[6]).replace(",", "").strip()
+
+                # ✅ 수정: 각 값이 실제 숫자인지 검증 후 변환
+                if not all(v.replace(".", "").isdigit() for v in [close_str, open_str, high_str, low_str, vol_str]):
+                    continue
+
+                close  = int(float(close_str))
+                open_p = int(float(open_str))
+                high   = int(float(high_str))
+                low    = int(float(low_str))
+                volume = int(float(vol_str))
+
                 results.append({
                     "date": date_str,
                     "open": open_p,
@@ -139,6 +154,7 @@ def fetch_naver_daily_prices(code, days=14):
                 })
             except (ValueError, IndexError):
                 continue
+
         results = results[:days]
         results.reverse()
         return results
@@ -229,7 +245,6 @@ def fetch_naver_company_info(code):
         res = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # 업종 추출
         upjong_links = soup.select(
             'a[href*="sise_group_detail.naver?type=upjong"]'
         )
@@ -239,7 +254,6 @@ def fetch_naver_company_info(code):
                 info["sector"] = txt
                 break
 
-        # 동종업종 기업 추출
         peer_table = soup.select_one('table[summary*="동종업종비교"]')
         if peer_table:
             peer_links = peer_table.select('a[href*="code="]')
