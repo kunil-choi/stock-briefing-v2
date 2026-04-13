@@ -59,22 +59,21 @@ def main():
     print("\n[AI 분석] Claude API로 교차분석 중...")
     html = analyze_and_generate_html(all_data, ANTHROPIC_API_KEY, channels_data=channels, gh_repo=GITHUB_REPO)
 
-# 저장
-os.makedirs("docs", exist_ok=True)
-os.makedirs("docs/archive", exist_ok=True)
+    # 저장
+    os.makedirs("docs", exist_ok=True)
+    os.makedirs("docs/archive", exist_ok=True)
 
-# ✅ 기존 index.html을 오늘 날짜로 archive에 백업
-existing_index = "docs/index.html"
-if os.path.exists(existing_index):
-    # 기존 파일의 날짜를 파일 내용에서 추출하거나, 오늘 날짜로 저장
-    archive_date = datetime.now().strftime("%Y-%m-%d")
-    archive_path = f"docs/archive/{archive_date}.html"
-    if not os.path.exists(archive_path):  # 중복 방지
-        shutil.copy2(existing_index, archive_path)
-        print(f"✅ 아카이브 저장: {archive_path}")
+    # 기존 index.html을 오늘 날짜로 archive에 백업
+    existing_index = "docs/index.html"
+    if os.path.exists(existing_index):
+        archive_date = datetime.now().strftime("%Y-%m-%d")
+        archive_path = f"docs/archive/{archive_date}.html"
+        if not os.path.exists(archive_path):
+            shutil.copy2(existing_index, archive_path)
+            print(f"✅ 아카이브 저장: {archive_path}")
 
-with open("docs/index.html", "w", encoding="utf-8") as f:
-    f.write(html)
+    with open("docs/index.html", "w", encoding="utf-8") as f:
+        f.write(html)
 
     print(f"\n✅ 브리핑 페이지 생성 완료")
     print(f"=== 완료: {datetime.now()} ===")
