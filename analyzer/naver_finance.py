@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 
 def verify_stock_via_naver(stock_name):
     try:
-        search_url = "https://finance.naver.com/search/searchList.naver?query=" + requests.utils.quote(stock_name)
+        search_url = (
+            "https://finance.naver.com/search/searchList.naver?query="
+            + requests.utils.quote(stock_name)
+        )
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(search_url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
@@ -36,23 +39,61 @@ def fetch_naver_stock_price(stock_name, code_override=None):
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        price_el = soup.select_one("#chart_area > div.rate_info > div > p.no_today > em > span.blind")
-        price = price_el.text.strip() if price_el else None
-        blind_spans = soup.select("#chart_area > div.rate_info > div > p.no_exday > em > span.blind")
+
+        # ✅ 셀렉터 다중 폴백: 구조 변경에 대비
+        price = None
+        price_selectors = [
+            "#chart_area > div.rate_info > div > p.no_today > em > span.blind",
+            "p.no_today em span.blind",
+            "strong#_nowVal",
+            "div.rate_info p.no_today em",
+        ]
+        for sel in price_selectors:
+            el = soup.select_one(sel)
+            if el:
+                price = el.text.strip().replace(",", "").replace("원", "").strip()
+                if price and price.isdigit():
+                    price = format(int(price), ",")
+                    break
+                price = el.text.strip()
+                if price:
+                    break
+
+        change_selectors = [
+            "#chart_area > div.rate_info > div > p.no_exday > em > span.blind",
+            "p.no_exday em span.blind",
+        ]
+        blind_spans = []
+        for sel in change_selectors:
+            blind_spans = soup.select(sel)
+            if blind_spans:
+                break
+
         change = blind_spans[0].text.strip() if len(blind_spans) > 0 else None
         change_pct = blind_spans[1].text.strip() if len(blind_spans) > 1 else None
-        no_exday = soup.select_one("#chart_area > div.rate_info > div > p.no_exday")
+
+        # 등락 방향 판별
         is_down = False
+        no_exday = soup.select_one(
+            "#chart_area > div.rate_info > div > p.no_exday"
+        ) or soup.select_one("p.no_exday")
         if no_exday:
             em = no_exday.select_one("em")
             if em and "nv01" in em.get("class", []):
                 is_down = True
+
         if change:
             change = ("-" if is_down else "+") + change
         if change_pct:
             change_pct = ("-" if is_down else "+") + change_pct
+
         if price:
-            return {"price": price, "change": change or "", "change_pct": change_pct or "", "code": code}
+            return {
+                "price": price,
+                "change": change or "",
+                "change_pct": change_pct or "",
+                "code": code,
+            }
     except Exception as e:
         print(f"  [네이버] {stock_name}({code}) 주가 조회 실패: {e}")
     return None
@@ -71,7 +112,10 @@ def fetch_naver_daily_prices(code, days=14):
             if dfs:
                 df = dfs[0].dropna(how="all")
                 all_rows.append(df)
-            if len(all_rows) > 0 and len(pd.concat(all_rows).dropna(how="all")) >= days:
+            if (
+                len(all_rows) > 0
+                and len(pd.concat(all_rows).dropna(how="all")) >= days
+            ):
                 break
         if not all_rows:
             return []
@@ -85,7 +129,14 @@ def fetch_naver_daily_prices(code, days=14):
                 high = int(float(str(row.iloc[4]).replace(",", "").strip()))
                 low = int(float(str(row.iloc[5]).replace(",", "").strip()))
                 volume = int(float(str(row.iloc[6]).replace(",", "").strip()))
-                results.append({"date": date_str, "open": open_p, "high": high, "low": low, "close": close, "volume": volume})
+                results.append({
+                    "date": date_str,
+                    "open": open_p,
+                    "high": high,
+                    "low": low,
+                    "close": close,
+                    "volume": volume,
+                })
             except (ValueError, IndexError):
                 continue
         results = results[:days]
@@ -102,21 +153,66 @@ def generate_candlestick_base64(daily_data, stock_name):
         import pandas as pd
         import matplotlib
         matplotlib.use("Agg")
+
         if not daily_data or len(daily_data) < 3:
             return None
+
         df = pd.DataFrame(daily_data)
         df["date"] = pd.to_datetime(df["date"])
         df.set_index("date", inplace=True)
-        df.rename(columns={"open": "Open", "high": "High", "low": "Low", "close": "Close", "volume": "Volume"}, inplace=True)
+        df.rename(columns={
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }, inplace=True)
         df = df[["Open", "High", "Low", "Close", "Volume"]]
-        mc = mpf.make_marketcolors(up="#ff6b6b", down="#339af0", edge={"up": "#ff6b6b", "down": "#339af0"}, wick={"up": "#ff6b6b", "down": "#339af0"}, volume={"up": "#ff6b6b80", "down": "#339af080"})
-        style = mpf.make_mpf_style(marketcolors=mc, facecolor="#141420", edgecolor="#2a2a3e", gridcolor="#1e1e2e", gridstyle="--", rc={"axes.labelcolor": "#888", "xtick.color": "#666", "ytick.color": "#666", "font.size": 8})
+
+        mc = mpf.make_marketcolors(
+            up="#ff6b6b", down="#339af0",
+            edge={"up": "#ff6b6b", "down": "#339af0"},
+            wick={"up": "#ff6b6b", "down": "#339af0"},
+            volume={"up": "#ff6b6b80", "down": "#339af080"},
+        )
+        style = mpf.make_mpf_style(
+            marketcolors=mc,
+            facecolor="#141420",
+            edgecolor="#2a2a3e",
+            gridcolor="#1e1e2e",
+            gridstyle="--",
+            rc={
+                "axes.labelcolor": "#888",
+                "xtick.color": "#666",
+                "ytick.color": "#666",
+                "font.size": 8,
+            },
+        )
+
         buf = io.BytesIO()
-        mpf.plot(df, type="candle", style=style, volume=True, title="\n" + stock_name, ylabel="", ylabel_lower="", figsize=(5, 2.8), tight_layout=True, savefig=dict(fname=buf, dpi=130, bbox_inches="tight", facecolor="#141420", edgecolor="none"))
+        mpf.plot(
+            df,
+            type="candle",
+            style=style,
+            volume=True,
+            title="\n" + stock_name,
+            ylabel="",
+            ylabel_lower="",
+            figsize=(5, 2.8),
+            tight_layout=True,
+            savefig=dict(
+                fname=buf,
+                dpi=130,
+                bbox_inches="tight",
+                facecolor="#141420",
+                edgecolor="none",
+            ),
+        )
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
         buf.close()
         return b64
+
     except ImportError:
         print("  [차트] mplfinance 미설치 - 차트 생성 건너뜀")
         return None
@@ -132,12 +228,18 @@ def fetch_naver_company_info(code):
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        upjong_links = soup.select('a[href*="sise_group_detail.naver?type=upjong"]')
+
+        # 업종 추출
+        upjong_links = soup.select(
+            'a[href*="sise_group_detail.naver?type=upjong"]'
+        )
         for link in upjong_links:
             txt = link.text.strip()
             if txt and len(txt) >= 2:
                 info["sector"] = txt
                 break
+
+        # 동종업종 기업 추출
         peer_table = soup.select_one('table[summary*="동종업종비교"]')
         if peer_table:
             peer_links = peer_table.select('a[href*="code="]')
@@ -145,12 +247,14 @@ def fetch_naver_company_info(code):
                 pname = pl.text.strip().replace("*", "").strip()
                 if pname and len(pname) >= 2:
                     info["peers"].append(pname)
+
         if not info["peers"]:
             alt_links = soup.select('div.tab_con1 a[href*="code="]')
             for al in alt_links:
                 aname = al.text.strip().replace("*", "").strip()
                 if aname and len(aname) >= 2 and aname not in info["peers"]:
                     info["peers"].append(aname)
+
     except Exception as e:
         print(f"  [기업정보] {code} 조회 실패: {e}")
     return info
