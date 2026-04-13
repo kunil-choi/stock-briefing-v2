@@ -325,6 +325,7 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                 if json_match:
                     corrected = json.loads(json_match.group())
 
+                    # 보호 필드 원본 복원 (stocks)
                     for orig in data.get("stocks", []):
                         for corr in corrected.get("stocks", []):
                             if corr.get("name") == orig.get("name"):
@@ -339,6 +340,7 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                                     if i < len(orig.get("reasons", [])):
                                         corr_r["source_url"] = orig["reasons"][i].get("source_url", "")
 
+                    # 보호 필드 원본 복원 (hidden_picks)
                     for orig in data.get("hidden_picks", []):
                         for corr in corrected.get("hidden_picks", []):
                             if corr.get("name") == orig.get("name"):
@@ -351,8 +353,14 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                                     if i < len(orig.get("reasons", [])):
                                         corr_r["source_url"] = orig["reasons"][i].get("source_url", "")
 
-                    old_desc = {s["name"]: s.get("description", "") for s in data.get("stocks", [])}
-                    new_desc = {s["name"]: s.get("description", "") for s in corrected.get("stocks", [])}
+                    old_desc = {
+                        s["name"]: s.get("description", "")
+                        for s in data.get("stocks", [])
+                    }
+                    new_desc = {
+                        s["name"]: s.get("description", "")
+                        for s in corrected.get("stocks", [])
+                    }
                     changes = sum(
                         1 for name in old_desc
                         if name in new_desc and old_desc[name] != new_desc[name]
@@ -360,16 +368,22 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     if changes:
                         print(f"[검증-C] {changes}건 교정됨")
 
-                    data["stocks"] = corrected.get("stocks", data["stocks"])
-                    data["hidden_picks"] = corrected.get("hidden_picks", data["hidden_picks"])
+                    # ✅ 수정: stocks/hidden_picks — 빈 리스트 반환 시 원본 유지
+                    if corrected.get("stocks"):
+                        data["stocks"] = corrected["stocks"]
+                    if corrected.get("hidden_picks") is not None:
+                        # hidden_picks는 실제로 비어있을 수도 있으므로
+                        # None인 경우만 원본 유지, 빈 리스트는 허용
+                        if len(corrected["hidden_picks"]) > 0:
+                            data["hidden_picks"] = corrected["hidden_picks"]
 
-                    # ✅ 수정: market_summary / investment_strategy — 빈 값이면 원본 유지
+                    # ✅ market_summary / investment_strategy — 빈 값이면 원본 유지
                     if corrected.get("market_summary"):
                         data["market_summary"] = corrected["market_summary"]
                     if corrected.get("investment_strategy"):
                         data["investment_strategy"] = corrected["investment_strategy"]
 
-                    # ✅ 수정: hot_sectors — 빈 리스트면 원본 유지
+                    # ✅ hot_sectors — 빈 리스트면 원본 유지
                     if corrected.get("hot_sectors"):
                         data["hot_sectors"] = corrected["hot_sectors"]
 
