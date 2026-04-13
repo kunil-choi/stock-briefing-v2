@@ -16,17 +16,11 @@ CB = "\u0060\u0060\u0060"
 # 1단계: 종목 목록 로드 (캐시 활용)
 # ──────────────────────────────────────────
 def load_stock_names() -> dict:
-    """
-    KRX(한국거래소) 공식 API에서 코스피/코스닥 전체 종목 목록을 가져옵니다.
-    당일 캐시가 있으면 캐시를 사용합니다.
-    반환: {종목명: 종목코드}
-    """
     import requests
 
     cache_path = "data/stock_names_cache.json"
     today = datetime.now(KST).strftime("%Y-%m-%d")
 
-    # 오늘 날짜 캐시가 있으면 바로 사용
     if os.path.exists(cache_path):
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
@@ -66,7 +60,6 @@ def load_stock_names() -> dict:
         except Exception as e:
             print(f"  [{market_name}] KRX 오류: {e}")
 
-    # KRX 실패시 하드코딩 주요 종목으로 폴백
     if not stock_map:
         print("  [종목목록] KRX 실패 -> 주요 종목 폴백 사용")
         stock_map = {
@@ -136,7 +129,6 @@ def load_stock_names() -> dict:
             "SK에코플랜트": "034300",
         }
 
-    # 캐시 저장
     os.makedirs("data", exist_ok=True)
     with open(cache_path, "w", encoding="utf-8") as f:
         json.dump({"date": today, "stocks": stock_map}, f, ensure_ascii=False)
@@ -152,6 +144,8 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
     """
     수집된 텍스트에서 종목명을 문자열 매칭으로 찾아
     채널별 언급 횟수를 카운트합니다.
+    - 같은 콘텐츠(link 기준) 내 중복 언급은 1회로 카운트
+    - 서로 다른 콘텐츠에서 언급된 횟수만 카운트
 
     반환 형식:
     {
@@ -188,6 +182,9 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
         source_name = item.get("source_name", "")
         link = item.get("link", "")
 
+        # 콘텐츠 고유 식별자: link가 있으면 link, 없으면 source_name + title 조합
+        content_id = link if link else (source_name + "|" + item.get("title", ""))
+
         full_text = " ".join([
             item.get("title", ""),
             item.get("summary", ""),
@@ -210,6 +207,14 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
                     "total": 0,
                 }
 
+            # ✅ 핵심 수정: 같은 콘텐츠(content_id)에서 이미 등록됐으면 스킵
+            already = any(
+                m.get("content_id") == content_id
+                for m in mentions[stock_name][source_type]
+            )
+            if already:
+                continue
+
             # 해당 종목 주변 문맥 150자 추출
             idx = full_text.find(stock_name)
             context = full_text[max(0, idx - 50): idx + 150].strip()
@@ -218,6 +223,7 @@ def extract_mentions(all_data: list, stock_map: dict) -> dict:
                 "source_name": source_name,
                 "text": context,
                 "link": link,
+                "content_id": content_id,  # 중복 체크용
             })
             mentions[stock_name]["total"] += 1
 
@@ -253,10 +259,6 @@ def filter_mentions(mentions: dict, min_channel_types: int = 2) -> dict:
 # ──────────────────────────────────────────
 def build_analysis_prompt(filtered_mentions: dict, all_data: list,
                            today_date: str, now_kst: str) -> str:
-    """
-    선별된 종목들에 대해 각 채널 녹취록 발언 내용과
-    긍정/중립/부정을 분석하는 프롬프트 생성
-    """
     stock_contexts = ""
     for rank, (name, data) in enumerate(filtered_mentions.items(), 1):
         if rank > 15:
@@ -289,8 +291,8 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
         f"앞뒤 문맥을 읽어 실제 어떤 종목을 가리키는지 파악하고 "
         f"반드시 구체적 종목명으로 기재하세요.\n"
         f"3. signal은 긍정/부정/중립 발언 횟수를 합산해 다수결로 결정하세요.\n"
-        f"4. channel_counts는 각 채널별 실제 언급 횟수를 그대로 기재하세요.\n"
-        f"5. total_count는 모든 채널 언급 횟수의 합계입니다.\n"
+        f"4. channel_counts는 각 채널별 실제 콘텐츠 수를 그대로 기재하세요.\n"
+        f"5. total_count는 모든 채널 콘텐츠 수의 합계입니다.\n"
         f"6. overlap_count는 언급된 채널 종류의 수입니다.\n"
         f"7. reasons에는 채널별 실제 발언 내용을 구체적으로 요약하세요. "
         f"모호한 표현 없이 반드시 종목명을 명시하세요.\n"
@@ -367,7 +369,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
     today_date = datetime.now(KST).strftime("%Y-%m-%d")
 
     # ── 1단계: 코드로 종목 추출 ──
-    print("\n[1단계] 종목명 추출 (네이버 종목목록 매칭)...")
+    print("\n[1단계] 종목명 추출 (KRX 종목목록 매칭)...")
     stock_map = load_stock_names()
 
     if not stock_map:
