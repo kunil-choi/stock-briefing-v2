@@ -1,3 +1,4 @@
+# analyzer/ai_analyzer.py
 import json
 import os
 import re
@@ -134,12 +135,6 @@ def load_stock_names() -> dict:
 
 
 def extract_mentions(all_data: list, stock_map: dict) -> dict:
-    """
-    수집된 텍스트에서 종목명을 문자열 매칭으로 찾아
-    채널별 언급 횟수를 카운트합니다.
-    - 같은 콘텐츠(content_id) 내 중복 언급은 1회로 카운트
-    - 실제 link를 reasons에 함께 저장해 바로보기 링크에 활용
-    """
     type_map = {
         "뉴스": "뉴스",
         "경제방송": "경제방송",
@@ -329,17 +324,15 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
     return prompt
 
 
-# ✅ source_url 복원: 정확 일치 우선, 부분 포함 매칭 폴백
 def _restore_source_url(reason, real_channel_data):
     """
     reason의 source_name이 실제 수집 데이터의 source_name과
     정확히 일치하거나 부분 포함될 때 link를 복원합니다.
-    (유튜브 패널리스트 이름 포함 케이스 대응)
     """
     ch = reason.get("source_type", "")
     sname = reason.get("source_name", "")
     if reason.get("source_url"):
-        return  # 이미 있으면 건드리지 않음
+        return
 
     ch_key = {
         "뉴스": "뉴스", "경제방송": "경제방송",
@@ -356,14 +349,14 @@ def _restore_source_url(reason, real_channel_data):
             reason["source_url"] = m["link"]
             return
 
-    # ✅ 2차: 부분 포함 매칭 (예: "채널명 (패널: 홍춘욱)" ↔ "채널명")
+    # 2차: 부분 포함 매칭
     for m in candidates:
         real_sname = m.get("source_name", "")
         if (sname in real_sname or real_sname in sname) and m.get("link"):
             reason["source_url"] = m["link"]
             return
 
-    # ✅ 3차: 같은 채널 타입의 첫 번째 링크로 폴백
+    # 3차: 같은 채널 타입의 첫 번째 링크로 폴백
     for m in candidates:
         if m.get("link"):
             reason["source_url"] = m["link"]
@@ -436,7 +429,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             "investment_strategy": "AI 분석에 실패했습니다.",
         }
 
-    # ✅ channel_counts / total_count 실제 수집값으로 덮어쓰기 + source_url 복원
+    # channel_counts / total_count 실제 수집값으로 덮어쓰기 + source_url 복원
     for stock in data.get("stocks", []):
         name = stock.get("name", "")
         if name in filtered:
@@ -451,21 +444,38 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             for reason in stock.get("reasons", []):
                 _restore_source_url(reason, real)
 
-    # ✅ hidden_picks source_url 복원 (전체 filtered 풀에서 채널 타입 기반 검색)
+    # ✅ 수정: hidden_picks source_url 복원 — 해당 종목명으로 filtered 먼저 탐색,
+    #          없을 경우에만 채널 타입 기반 폴백 (오염 방지)
     for stock in data.get("hidden_picks", []):
+        hp_name = stock.get("name", "")
         for reason in stock.get("reasons", []):
+            if reason.get("source_url"):
+                continue
             ch_key = {
                 "뉴스": "뉴스", "경제방송": "경제방송",
                 "유튜브": "유튜브", "애널리스트": "애널리스트"
             }.get(reason.get("source_type", ""), "")
-            if not ch_key or reason.get("source_url"):
+            if not ch_key:
                 continue
-            # 모든 filtered 종목의 해당 채널 풀에서 source_name 매칭
+
+            # 1순위: 히든픽 종목명과 동일한 filtered 항목에서 탐색
+            if hp_name in filtered:
+                _restore_source_url(reason, filtered[hp_name])
+                if reason.get("source_url"):
+                    continue
+
+            # 2순위: source_name 기준으로 전체 filtered 탐색
+            sname = reason.get("source_name", "")
             for stock_data in filtered.values():
-                if ch_key in stock_data:
-                    _restore_source_url(reason, stock_data)
-                    if reason.get("source_url"):
+                if ch_key not in stock_data:
+                    continue
+                for m in stock_data[ch_key]:
+                    real_sname = m.get("source_name", "")
+                    if (sname == real_sname or sname in real_sname or real_sname in sname) and m.get("link"):
+                        reason["source_url"] = m["link"]
                         break
+                if reason.get("source_url"):
+                    break
 
     if data.get("stocks") or data.get("hidden_picks"):
         data = validate_stocks(data, api_key, all_data, stock_map)
