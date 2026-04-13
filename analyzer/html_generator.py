@@ -76,7 +76,10 @@ def generate_html(data, channels_data=None, gh_repo=""):
         chart_btn_html = ""
         if chart_b64:
             chart_btn_html = ' <span class="chart-icon" onclick="openChartWindow(\'' + name + '\', \'x\')" data-chart="' + str(rank) + '" title="14일 주가 차트 보기">&#x1F4C8; 차트보기</span>'
-
+        else:
+            naver_url = "https://finance.naver.com/item/main.naver?query=" + requests.utils.quote(name)
+            chart_btn_html = ' <a href="' + naver_url + '" target="_blank" class="chart-icon" title="네이버 금융에서 차트 보기">&#x1F4C8; 차트보기</a>'
+    
         reasons_html = ""
         for reason in reasons:
             rs = reason.get("source_type", "")
