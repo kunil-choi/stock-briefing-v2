@@ -123,7 +123,6 @@ def load_stock_names() -> dict:
             "포스코인터내셔널": "047050", "LX인터내셔널": "001120",
             "SK에코플랜트": "034300",
             "산일전기": "062040", "LS ELECTRIC": "010120",
-            "HD현대일렉트릭": "267260",
         }
 
     os.makedirs("data", exist_ok=True)
@@ -325,10 +324,6 @@ def build_analysis_prompt(filtered_mentions: dict, all_data: list,
 
 
 def _restore_source_url(reason, real_channel_data):
-    """
-    reason의 source_name이 실제 수집 데이터의 source_name과
-    정확히 일치하거나 부분 포함될 때 link를 복원합니다.
-    """
     ch = reason.get("source_type", "")
     sname = reason.get("source_name", "")
     if reason.get("source_url"):
@@ -343,20 +338,17 @@ def _restore_source_url(reason, real_channel_data):
 
     candidates = real_channel_data[ch_key]
 
-    # 1차: 정확 일치
     for m in candidates:
         if m.get("source_name") == sname and m.get("link"):
             reason["source_url"] = m["link"]
             return
 
-    # 2차: 부분 포함 매칭
     for m in candidates:
         real_sname = m.get("source_name", "")
         if (sname in real_sname or real_sname in sname) and m.get("link"):
             reason["source_url"] = m["link"]
             return
 
-    # 3차: 같은 채널 타입의 첫 번째 링크로 폴백
     for m in candidates:
         if m.get("link"):
             reason["source_url"] = m["link"]
@@ -371,6 +363,9 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
     now_kst = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     today_date = datetime.now(KST).strftime("%Y-%m-%d")
 
+    # ✅ 수정: GH_TOKEN을 환경변수에서 읽어서 generate_html에 전달
+    gh_token = os.environ.get("GH_TOKEN", "")
+
     print("\n[1단계] 종목명 추출 (KRX 종목목록 매칭)...")
     stock_map = load_stock_names()
 
@@ -383,7 +378,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             "hidden_picks": [],
             "investment_strategy": "데이터 수집은 완료되었으나 종목 목록 로드에 실패했습니다.",
         }
-        return generate_html(data, channels_data, gh_repo)
+        return generate_html(data, channels_data, gh_repo, gh_token)
 
     mentions = extract_mentions(all_data, stock_map)
     print(f"  [추출] 언급 종목 총 {len(mentions)}개 발견")
@@ -399,7 +394,7 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             "hidden_picks": [],
             "investment_strategy": "분석할 종목이 없습니다.",
         }
-        return generate_html(data, channels_data, gh_repo)
+        return generate_html(data, channels_data, gh_repo, gh_token)
 
     print(f"\n[2단계] Claude 심층 분석 ({len(filtered)}개 종목)...")
     prompt = build_analysis_prompt(filtered, all_data, today_date, now_kst)
@@ -429,7 +424,6 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             "investment_strategy": "AI 분석에 실패했습니다.",
         }
 
-    # channel_counts / total_count 실제 수집값으로 덮어쓰기 + source_url 복원
     for stock in data.get("stocks", []):
         name = stock.get("name", "")
         if name in filtered:
@@ -444,8 +438,6 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             for reason in stock.get("reasons", []):
                 _restore_source_url(reason, real)
 
-    # ✅ 수정: hidden_picks source_url 복원 — 해당 종목명으로 filtered 먼저 탐색,
-    #          없을 경우에만 채널 타입 기반 폴백 (오염 방지)
     for stock in data.get("hidden_picks", []):
         hp_name = stock.get("name", "")
         for reason in stock.get("reasons", []):
@@ -458,13 +450,11 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
             if not ch_key:
                 continue
 
-            # 1순위: 히든픽 종목명과 동일한 filtered 항목에서 탐색
             if hp_name in filtered:
                 _restore_source_url(reason, filtered[hp_name])
                 if reason.get("source_url"):
                     continue
 
-            # 2순위: source_name 기준으로 전체 filtered 탐색
             sname = reason.get("source_name", "")
             for stock_data in filtered.values():
                 if ch_key not in stock_data:
@@ -492,4 +482,5 @@ def analyze_and_generate_html(all_data, api_key, channels_data=None, gh_repo="")
         json.dump(save_data, f, ensure_ascii=False, indent=2)
     print("[저장] data/briefing_data.json 완료")
 
-    return generate_html(data, channels_data, gh_repo)
+    # ✅ 수정: gh_token을 generate_html에 전달
+    return generate_html(data, channels_data, gh_repo, gh_token)
