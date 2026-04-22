@@ -5,7 +5,11 @@ from datetime import datetime, timedelta, timezone
 KST = timezone(timedelta(hours=9))
 
 
-def generate_html(data, channels_data=None, gh_repo=""):
+def generate_html(data, channels_data=None, gh_repo="", gh_token=""):
+    """
+    ✅ 수정: gh_token 파라미터 추가 (private repo 아카이브 API 인증용)
+    gh_token이 없을 경우 os.environ에서 자동으로 읽음
+    """
     now_kst = datetime.now(KST)
     briefing_date = data.get("briefing_date", now_kst.strftime("%Y-%m-%d"))
     briefing_datetime = now_kst.strftime("%Y-%m-%d %H:%M")
@@ -13,7 +17,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
     hot_sectors = data.get("hot_sectors", [])
     stocks = data.get("stocks", [])
     hidden_picks = data.get("hidden_picks", [])
-    # ✅ final_summary 대신 investment_strategy 사용
     investment_strategy = data.get("investment_strategy", data.get("final_summary", ""))
 
     stocks = [s for s in stocks if s.get("overlap_count", 0) >= 2]
@@ -119,7 +122,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
         elif market == "해외":
             price_info_text = " (해외 종목)"
 
-        # ✅ 차트보기: naver_code 있으면 종목 페이지, 없으면 stock_map 폴백
         chart_btn_html = ""
         if chart_b64:
             chart_btn_html = (
@@ -306,23 +308,27 @@ def generate_html(data, channels_data=None, gh_repo=""):
         )
 
     # ── JavaScript 차트 데이터 맵 ──
+    # ✅ 수정: base64에서 개행 문자 제거 (JS 파싱 오류 방지)
     chart_data_js = "var chartDataMap = {};\n"
     for stock in stocks:
         b64 = stock.get("chart_base64")
         if b64:
+            clean_b64 = b64.replace('\n', '').replace('\r', '')
             chart_data_js += (
                 'chartDataMap["' + str(stock.get("rank", ""))
-                + '"] = "data:image/png;base64,' + b64 + '";\n'
+                + '"] = "data:image/png;base64,' + clean_b64 + '";\n'
             )
     for hp in hidden_picks:
         b64 = hp.get("chart_base64")
         if b64:
+            clean_b64 = b64.replace('\n', '').replace('\r', '')
             chart_data_js += (
                 'chartDataMap["hp_' + str(hp.get("rank", ""))
-                + '"] = "data:image/png;base64,' + b64 + '";\n'
+                + '"] = "data:image/png;base64,' + clean_b64 + '";\n'
             )
 
     # ── 아카이브 링크 (GitHub API 방식) ──
+    # ✅ 수정: private repo를 위한 GH_TOKEN 인증 헤더 추가
     archive_links = ""
     if gh_repo:
         try:
@@ -333,7 +339,13 @@ def generate_html(data, channels_data=None, gh_repo=""):
                 + repo_owner + "/" + repo_name
                 + "/contents/docs/archive"
             )
-            resp = requests.get(api_url, timeout=10)
+            # gh_token 파라미터 → 없으면 환경변수 자동 읽기
+            token = gh_token or os.environ.get("GH_TOKEN", "")
+            headers = {"Accept": "application/vnd.github.v3+json"}
+            if token:
+                headers["Authorization"] = "token " + token
+
+            resp = requests.get(api_url, headers=headers, timeout=10)
             if resp.status_code == 200:
                 files = resp.json()
                 html_files = sorted(
@@ -347,8 +359,10 @@ def generate_html(data, channels_data=None, gh_repo=""):
                         + repo_name + '/archive/' + af
                         + '" class="archive-link">' + date_str + '</a>\n'
                     )
-        except Exception:
-            pass
+            else:
+                print(f"  [아카이브] GitHub API 응답: {resp.status_code}")
+        except Exception as e:
+            print(f"  [아카이브] 오류: {e}")
 
     # ── HTML 조립 ──
     html = (
@@ -470,7 +484,6 @@ def generate_html(data, channels_data=None, gh_repo=""):
             '    </div>\n'
         )
 
-    # ✅ 'AI 최종 요약' → 'AI 투자 전략'으로 변경
     if investment_strategy:
         html += (
             '\n'
