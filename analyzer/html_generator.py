@@ -6,10 +6,6 @@ KST = timezone(timedelta(hours=9))
 
 
 def generate_html(data, channels_data=None, gh_repo="", gh_token=""):
-    """
-    ✅ 수정: gh_token 파라미터 추가 (private repo 아카이브 API 인증용)
-    gh_token이 없을 경우 os.environ에서 자동으로 읽음
-    """
     now_kst = datetime.now(KST)
     briefing_date = data.get("briefing_date", now_kst.strftime("%Y-%m-%d"))
     briefing_datetime = now_kst.strftime("%Y-%m-%d %H:%M")
@@ -308,7 +304,6 @@ def generate_html(data, channels_data=None, gh_repo="", gh_token=""):
         )
 
     # ── JavaScript 차트 데이터 맵 ──
-    # ✅ 수정: base64에서 개행 문자 제거 (JS 파싱 오류 방지)
     chart_data_js = "var chartDataMap = {};\n"
     for stock in stocks:
         b64 = stock.get("chart_base64")
@@ -327,42 +322,33 @@ def generate_html(data, channels_data=None, gh_repo="", gh_token=""):
                 + '"] = "data:image/png;base64,' + clean_b64 + '";\n'
             )
 
-    # ── 아카이브 링크 (GitHub API 방식) ──
-    # ✅ 수정: private repo를 위한 GH_TOKEN 인증 헤더 추가
+    # ── 아카이브 링크 (로컬 파일 직접 스캔 방식) ──
+    # ✅ 수정: GitHub API 호출 제거 → 로컬 docs/archive 폴더 직접 읽기
+    #         퍼블릭/프라이빗 여부와 무관하게 항상 작동
     archive_links = ""
-    if gh_repo:
-        try:
-            repo_owner = gh_repo.split("/")[0]
-            repo_name = gh_repo.split("/")[1]
-            api_url = (
-                "https://api.github.com/repos/"
-                + repo_owner + "/" + repo_name
-                + "/contents/docs/archive"
+    try:
+        archive_dir = "docs/archive"
+        if os.path.exists(archive_dir):
+            html_files = sorted(
+                [f for f in os.listdir(archive_dir) if f.endswith(".html")],
+                reverse=True
             )
-            # gh_token 파라미터 → 없으면 환경변수 자동 읽기
-            token = gh_token or os.environ.get("GH_TOKEN", "")
-            headers = {"Accept": "application/vnd.github.v3+json"}
-            if token:
-                headers["Authorization"] = "token " + token
-
-            resp = requests.get(api_url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                files = resp.json()
-                html_files = sorted(
-                    [f["name"] for f in files if f["name"].endswith(".html")],
-                    reverse=True,
+            repo_owner = gh_repo.split("/")[0] if gh_repo and "/" in gh_repo else ""
+            repo_name  = gh_repo.split("/")[1] if gh_repo and "/" in gh_repo else ""
+            for af in html_files[:14]:
+                date_str = af.replace(".html", "")
+                if repo_owner and repo_name:
+                    url = f"https://{repo_owner}.github.io/{repo_name}/archive/{af}"
+                else:
+                    url = f"archive/{af}"
+                archive_links += (
+                    f'<a href="{url}" class="archive-link">{date_str}</a>\n'
                 )
-                for af in html_files[:14]:
-                    date_str = af.replace(".html", "")
-                    archive_links += (
-                        '<a href="https://' + repo_owner + '.github.io/'
-                        + repo_name + '/archive/' + af
-                        + '" class="archive-link">' + date_str + '</a>\n'
-                    )
-            else:
-                print(f"  [아카이브] GitHub API 응답: {resp.status_code}")
-        except Exception as e:
-            print(f"  [아카이브] 오류: {e}")
+            print(f"  [아카이브] {len(html_files)}개 파일 링크 생성 완료")
+        else:
+            print("  [아카이브] docs/archive 폴더 없음")
+    except Exception as e:
+        print(f"  [아카이브] 오류: {e}")
 
     # ── HTML 조립 ──
     html = (
