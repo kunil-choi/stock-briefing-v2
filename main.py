@@ -1,19 +1,3 @@
-# main.py
-import os
-import json
-import shutil
-from datetime import datetime
-
-from config import (
-    ANTHROPIC_API_KEY, YOUTUBE_API_KEY, GH_TOKEN, GITHUB_REPO,
-    NEWS_RSS_FEEDS, BROADCAST_HOURS, YOUTUBER_HOURS, load_channels
-)
-from collectors.news_collector import collect_news
-from collectors.youtube_collector import collect_broadcast_youtube, collect_youtuber
-from collectors.analyst_collector import collect_analyst
-from analyzer.ai_analyzer import analyze_and_generate_html
-
-
 def main():
     print(f"=== AI 증시 모닝브리핑 시작: {datetime.now()} ===")
 
@@ -55,15 +39,10 @@ def main():
     with open(f"data/raw_{today_str}.json", "w", encoding="utf-8") as f:
         json.dump(all_data, f, ensure_ascii=False, indent=2, default=str)
 
-    # AI 분석 + HTML 생성 (채널 정보도 전달)
-    print("\n[AI 분석] Claude API로 교차분석 중...")
-    html = analyze_and_generate_html(all_data, ANTHROPIC_API_KEY, channels_data=channels, gh_repo=GITHUB_REPO)
-
-    # 저장
     os.makedirs("docs", exist_ok=True)
     os.makedirs("docs/archive", exist_ok=True)
 
-    # 기존 index.html을 오늘 날짜로 archive에 백업
+    # ✅ 순서 변경: 기존 index.html을 아카이브로 먼저 백업
     existing_index = "docs/index.html"
     if os.path.exists(existing_index):
         archive_date = datetime.now().strftime("%Y-%m-%d")
@@ -72,6 +51,11 @@ def main():
             shutil.copy2(existing_index, archive_path)
             print(f"✅ 아카이브 저장: {archive_path}")
 
+    # ✅ 아카이브 백업 이후에 HTML 생성 → 오늘 날짜 파일이 archive에 존재하므로 링크에 포함됨
+    print("\n[AI 분석] Claude API로 교차분석 중...")
+    html = analyze_and_generate_html(all_data, ANTHROPIC_API_KEY, channels_data=channels, gh_repo=GITHUB_REPO)
+
+    # 새 index.html 저장
     with open("docs/index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
