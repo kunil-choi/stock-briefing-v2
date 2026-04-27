@@ -7,21 +7,47 @@ from bs4 import BeautifulSoup
 
 
 def verify_stock_via_naver(stock_name):
+    """
+    네이버 금융 검색으로 종목명 → 종목코드 조회.
+    searchList.naver는 404 폐지됨 → searchResult.naver 로 교체.
+    셀렉터도 다중 fallback 적용.
+    """
     try:
         search_url = (
-            "https://finance.naver.com/search/searchList.naver?query="
+            "https://finance.naver.com/search/searchResult.naver?query="
             + requests.utils.quote(stock_name)
         )
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
         res = requests.get(search_url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        first_link = soup.select_one("table.tbl_search td.tit a")
-        if first_link:
-            href = first_link.get("href", "")
-            code_match = re.search(r"code=(\d{6})", href)
-            found_name = first_link.text.strip()
-            if code_match:
-                return {"name": found_name, "code": code_match.group(1)}
+
+        # 셀렉터 우선순위: 새 구조 → 구 구조 순으로 시도
+        selectors = [
+            "table.tbl_search td.tit a",       # 기존 구조 (혹시 아직 유효하면 재사용)
+            "div.section_search a.tit",         # 검색결과 새 구조
+            "ul.lst_search li a.tit",           # 리스트형 새 구조
+            "div.search_result a[href*='code=']",  # code= 파라미터 포함 링크
+            "a[href*='/item/main.naver?code=']",   # 종목 메인 페이지 직접 링크
+        ]
+
+        for sel in selectors:
+            first_link = soup.select_one(sel)
+            if first_link:
+                href = first_link.get("href", "")
+                code_match = re.search(r"code=(\d{6})", href)
+                found_name = first_link.text.strip()
+                if code_match and found_name:
+                    print(f"  [네이버검색] '{stock_name}' → '{found_name}' ({code_match.group(1)}) [셀렉터: {sel}]")
+                    return {"name": found_name, "code": code_match.group(1)}
+
+        print(f"  [네이버검색] '{stock_name}' 검색결과 없음 (셀렉터 매칭 실패)")
+
     except Exception as e:
         print(f"  [네이버검색] {stock_name} 검색 실패: {e}")
     return None
@@ -124,7 +150,7 @@ def fetch_naver_daily_prices(code, days=14):
             try:
                 date_str = str(row.iloc[0]).strip()
 
-                # ✅ 수정: 날짜 형식 유효성 검증 — 숫자와 점(.)으로만 이루어진 날짜만 허용
+                # 날짜 형식 유효성 검증 — 숫자와 점(.)으로만 이루어진 날짜만 허용
                 if not re.match(r'^\d{4}\.\d{2}\.\d{2}$', date_str):
                     continue
 
@@ -134,7 +160,7 @@ def fetch_naver_daily_prices(code, days=14):
                 low_str   = str(row.iloc[5]).replace(",", "").strip()
                 vol_str   = str(row.iloc[6]).replace(",", "").strip()
 
-                # ✅ 수정: 각 값이 실제 숫자인지 검증 후 변환
+                # 각 값이 실제 숫자인지 검증 후 변환
                 if not all(v.replace(".", "").isdigit() for v in [close_str, open_str, high_str, low_str, vol_str]):
                     continue
 
