@@ -26,10 +26,27 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
         return _naver_cache[stock_name]
 
     def _get_code(stock_name, naver_result):
+        # 1순위: 네이버 API 결과
         if naver_result and naver_result.get("code"):
             return naver_result["code"]
+        # 2순위: stock_map 정확 일치
         if stock_map and stock_name in stock_map:
             return stock_map[stock_name]
+        # 3순위: stock_map 부분 일치 (예: "파마리서치" ↔ "파마리서치프로덕트")
+        if stock_map:
+            name_clean = stock_name.replace(" ", "")
+            best_match = None
+            best_len = 9999
+            for key, code in stock_map.items():
+                key_clean = key.replace(" ", "")
+                if name_clean in key_clean or key_clean in name_clean:
+                    # 가장 짧은(가장 구체적인) 이름을 우선 선택
+                    if len(key_clean) < best_len:
+                        best_match = (key, code)
+                        best_len = len(key_clean)
+            if best_match:
+                print(f"  [부분일치] '{stock_name}' → '{best_match[0]}' ({best_match[1]})")
+                return best_match[1]
         return None
 
     def name_in_text(stock_name, text):
@@ -150,6 +167,17 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
         "코스트코", "월마트", "비자", "마스터카드",
     ]
 
+    def _fetch_chart(name, code):
+        """종목코드가 있으면 price_info 성공 여부와 무관하게 차트 생성 시도"""
+        daily = fetch_naver_daily_prices(code, days=14)
+        if daily:
+            chart_b64 = generate_candlestick_base64(daily, name)
+            if chart_b64:
+                print(f"  [CHART] {name} 차트 생성 완료 ({len(daily)}일)")
+                return chart_b64
+        print(f"  [CHART] {name} 차트 데이터 없음")
+        return None
+
     for stock in data.get("stocks", []):
         name = stock.get("name", "")
         is_foreign = any(kw in name for kw in foreign_keywords)
@@ -171,19 +199,10 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             stock["verified_price"] = price_info
             if price_info:
                 print(f"  [PRICE] {name}: {price_info['price']}원 {price_info.get('change', '')}")
-                daily = fetch_naver_daily_prices(code, days=14)
-                if daily:
-                    chart_b64 = generate_candlestick_base64(daily, name)
-                    stock["chart_base64"] = chart_b64
-                    if chart_b64:
-                        print(f"  [CHART] {name} 차트 생성 완료 ({len(daily)}일)")
-                    else:
-                        stock["chart_base64"] = None
-                else:
-                    stock["chart_base64"] = None
             else:
                 stock["verified_price"] = None
-                stock["chart_base64"] = None
+            # price_info 성공 여부와 무관하게 차트 시도
+            stock["chart_base64"] = _fetch_chart(name, code)
         else:
             print(f"  [WARN] {name}: 코드 조회 실패 -> 종목 유지, 주가 없음")
             stock["verified_price"] = None
@@ -208,19 +227,10 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             stock["verified_price"] = price_info
             if price_info:
                 print(f"  [PRICE] {name}: {price_info['price']}원 (히든픽)")
-                daily = fetch_naver_daily_prices(code, days=14)
-                if daily:
-                    chart_b64 = generate_candlestick_base64(daily, name)
-                    stock["chart_base64"] = chart_b64
-                    if chart_b64:
-                        print(f"  [CHART] {name} 차트 생성 완료 (히든픽, {len(daily)}일)")
-                    else:
-                        stock["chart_base64"] = None
-                else:
-                    stock["chart_base64"] = None
             else:
                 stock["verified_price"] = None
-                stock["chart_base64"] = None
+            # price_info 성공 여부와 무관하게 차트 시도
+            stock["chart_base64"] = _fetch_chart(name, code)
         else:
             print(f"  [WARN] {name}: 코드 조회 실패 (히든픽)")
             stock["verified_price"] = None
@@ -372,8 +382,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     if corrected.get("stocks"):
                         data["stocks"] = corrected["stocks"]
                     if corrected.get("hidden_picks") is not None:
-                        # hidden_picks는 실제로 비어있을 수도 있으므로
-                        # None인 경우만 원본 유지, 빈 리스트는 허용
                         if len(corrected["hidden_picks"]) > 0:
                             data["hidden_picks"] = corrected["hidden_picks"]
 
