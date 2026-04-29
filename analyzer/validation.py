@@ -1,6 +1,8 @@
 # analyzer/validation.py
 import re
 import json
+import os
+from datetime import datetime, timedelta, timezone
 from .api_client import call_claude_with_retry
 from .naver_finance import (
     verify_stock_via_naver,
@@ -8,9 +10,31 @@ from .naver_finance import (
     fetch_naver_daily_prices,
     generate_candlestick_base64,
     fetch_naver_company_info,
+    search_code_by_autocomplete,  # ← 추가된 import
 )
 
 CB = "\u0060\u0060\u0060"
+
+# stock_names_cache.json 경로 — ai_analyzer.py와 동일한 파일 공유
+_CACHE_PATH = "data/stock_names_cache.json"
+_KST = timezone(timedelta(hours=9))
+
+
+def _save_to_cache(stock_name: str, code: str):
+    """새로 발견한 종목을 stock_names_cache.json에 저장"""
+    try:
+        today = datetime.now(_KST).strftime("%Y-%m-%d")
+        cache = {"date": today, "stocks": {}}
+        if os.path.exists(_CACHE_PATH):
+            with open(_CACHE_PATH, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        cache["stocks"][stock_name] = code
+        os.makedirs("data", exist_ok=True)
+        with open(_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False)
+        print(f"  [캐시저장] '{stock_name}' ({code}) → stock_names_cache.json 저장 완료")
+    except Exception as e:
+        print(f"  [캐시저장] 실패: {e}")
 
 
 def validate_stocks(data, api_key, all_data=None, stock_map=None):
@@ -26,13 +50,13 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
         return _naver_cache[stock_name]
 
     def _get_code(stock_name, naver_result):
-        # 1순위: 네이버 API 결과
+        # 1순위: 네이버 검색 결과
         if naver_result and naver_result.get("code"):
             return naver_result["code"]
         # 2순위: stock_map 정확 일치
         if stock_map and stock_name in stock_map:
             return stock_map[stock_name]
-        # 3순위: stock_map 부분 일치 (예: "파마리서치" ↔ "파마리서치프로덕트")
+        # 3순위: stock_map 부분 일치
         if stock_map:
             name_clean = stock_name.replace(" ", "")
             best_match = None
@@ -40,13 +64,21 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
             for key, code in stock_map.items():
                 key_clean = key.replace(" ", "")
                 if name_clean in key_clean or key_clean in name_clean:
-                    # 가장 짧은(가장 구체적인) 이름을 우선 선택
                     if len(key_clean) < best_len:
                         best_match = (key, code)
                         best_len = len(key_clean)
             if best_match:
                 print(f"  [부분일치] '{stock_name}' → '{best_match[0]}' ({best_match[1]})")
                 return best_match[1]
+        # 4순위: 네이버 자동완성 API — 위 세 가지 모두 실패한 경우
+        auto_result = search_code_by_autocomplete(stock_name)
+        if auto_result and auto_result.get("code"):
+            code = auto_result["code"]
+            # 찾은 코드를 캐시에 저장 → 다음번엔 2순위에서 바로 사용
+            if stock_map is not None:
+                stock_map[stock_name] = code
+            _save_to_cache(stock_name, code)
+            return code
         return None
 
     def name_in_text(stock_name, text):
@@ -201,7 +233,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                 print(f"  [PRICE] {name}: {price_info['price']}원 {price_info.get('change', '')}")
             else:
                 stock["verified_price"] = None
-            # price_info 성공 여부와 무관하게 차트 시도
             stock["chart_base64"] = _fetch_chart(name, code)
         else:
             print(f"  [WARN] {name}: 코드 조회 실패 -> 종목 유지, 주가 없음")
@@ -229,7 +260,6 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                 print(f"  [PRICE] {name}: {price_info['price']}원 (히든픽)")
             else:
                 stock["verified_price"] = None
-            # price_info 성공 여부와 무관하게 차트 시도
             stock["chart_base64"] = _fetch_chart(name, code)
         else:
             print(f"  [WARN] {name}: 코드 조회 실패 (히든픽)")
@@ -378,20 +408,17 @@ def validate_stocks(data, api_key, all_data=None, stock_map=None):
                     if changes:
                         print(f"[검증-C] {changes}건 교정됨")
 
-                    # ✅ 수정: stocks/hidden_picks — 빈 리스트 반환 시 원본 유지
                     if corrected.get("stocks"):
                         data["stocks"] = corrected["stocks"]
                     if corrected.get("hidden_picks") is not None:
                         if len(corrected["hidden_picks"]) > 0:
                             data["hidden_picks"] = corrected["hidden_picks"]
 
-                    # ✅ market_summary / investment_strategy — 빈 값이면 원본 유지
                     if corrected.get("market_summary"):
                         data["market_summary"] = corrected["market_summary"]
                     if corrected.get("investment_strategy"):
                         data["investment_strategy"] = corrected["investment_strategy"]
 
-                    # ✅ hot_sectors — 빈 리스트면 원본 유지
                     if corrected.get("hot_sectors"):
                         data["hot_sectors"] = corrected["hot_sectors"]
 
