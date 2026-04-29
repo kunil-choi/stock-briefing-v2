@@ -6,6 +6,36 @@ import requests
 from bs4 import BeautifulSoup
 
 
+def search_code_by_autocomplete(stock_name: str):
+    """
+    네이버 금융 자동완성 API로 종목코드 검색.
+    HTML 파싱 없이 JSON 응답 — 구조 변경에 강함.
+    성공 시 {"name": 종목명, "code": 코드} 반환, 실패 시 None.
+    """
+    try:
+        url = "https://ac.finance.naver.com/ac"
+        params = {
+            "q": stock_name,
+            "target": "stock,index,marketindicator",
+        }
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, params=params, headers=headers, timeout=5)
+        data = res.json()
+        # 응답 형식: {"items": [[["종목명","코드","0","코스피/코스닥",...], ...], ...]}
+        groups = data.get("items", [])
+        for group in groups:
+            for item in group:
+                if len(item) >= 2:
+                    name = item[0]
+                    code = item[1]
+                    if code and len(code) == 6 and code.isdigit():
+                        print(f"  [자동완성] '{stock_name}' → '{name}' ({code})")
+                        return {"name": name, "code": code}
+    except Exception as e:
+        print(f"  [자동완성] {stock_name} 검색 실패: {e}")
+    return None
+
+
 def verify_stock_via_naver(stock_name):
     """
     네이버 금융 검색으로 종목명 → 종목코드 조회.
@@ -27,13 +57,12 @@ def verify_stock_via_naver(stock_name):
         res = requests.get(search_url, headers=headers, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # 셀렉터 우선순위: 새 구조 → 구 구조 순으로 시도
         selectors = [
-            "table.tbl_search td.tit a",       # 기존 구조 (혹시 아직 유효하면 재사용)
-            "div.section_search a.tit",         # 검색결과 새 구조
-            "ul.lst_search li a.tit",           # 리스트형 새 구조
-            "div.search_result a[href*='code=']",  # code= 파라미터 포함 링크
-            "a[href*='/item/main.naver?code=']",   # 종목 메인 페이지 직접 링크
+            "table.tbl_search td.tit a",
+            "div.section_search a.tit",
+            "ul.lst_search li a.tit",
+            "div.search_result a[href*='code=']",
+            "a[href*='/item/main.naver?code=']",
         ]
 
         for sel in selectors:
@@ -150,7 +179,6 @@ def fetch_naver_daily_prices(code, days=14):
             try:
                 date_str = str(row.iloc[0]).strip()
 
-                # 날짜 형식 유효성 검증 — 숫자와 점(.)으로만 이루어진 날짜만 허용
                 if not re.match(r'^\d{4}\.\d{2}\.\d{2}$', date_str):
                     continue
 
@@ -160,7 +188,6 @@ def fetch_naver_daily_prices(code, days=14):
                 low_str   = str(row.iloc[5]).replace(",", "").strip()
                 vol_str   = str(row.iloc[6]).replace(",", "").strip()
 
-                # 각 값이 실제 숫자인지 검증 후 변환
                 if not all(v.replace(".", "").isdigit() for v in [close_str, open_str, high_str, low_str, vol_str]):
                     continue
 
